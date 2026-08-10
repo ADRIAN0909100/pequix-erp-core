@@ -4,9 +4,20 @@ import React, { useState } from 'react';
 export default function Home() {
   const [lista, setLista] = useState<'L1' | 'L2' | 'L3' | 'L4'>('L1');
   const [visibilidad, setVisibilidad] = useState<'CON_VALORES' | 'SOLO_UNITARIO' | 'SIN_VALORES'>('CON_VALORES');
+  const [almacenActivo, setAlmacenActivo] = useState('PED-0330');
 
   const deltaL2 = 1000;
   const deltaL4 = -2000;
+
+  const almacenesHolding = [
+    { id: 'PED-0330', nombre: 'El Palacio de la Pantaleta #1 Montería', nit: '901164484-3', razon: 'Comercializadora Palacio S.A.S' },
+    { id: 'PED-0329', nombre: 'El Palacio de la Pantaleta #2 Montería', nit: '901164484-3', razon: 'Comercializadora Palacio S.A.S' },
+    { id: 'PED-0331', nombre: 'La Media Naranja Montería', nit: '900314739-7', razon: 'Tendencias Futuristas S.A.S' },
+    { id: 'PED-0332', nombre: 'El Palacio de la Pantaleta #3 Montería', nit: '900050852-7', razon: 'Inversiones La Pantaleta S.A.S' },
+    { id: 'PED-0333', nombre: 'El Palacio CC Nuestro Montería', nit: '900314739-7', razon: 'Tendencias Futuristas S.A.S' },
+  ];
+
+  const actual = almacenesHolding.find(a => a.id === almacenActivo);
 
   const productos = [
     { ref: '745', desc: 'CONJUNTO BEBE DORMILON', curva: 'BEBÉS', prendas: 25, precioL1: 59900 },
@@ -26,29 +37,54 @@ export default function Home() {
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#090d16', color: '#f8fafc', padding: '20px', fontFamily: 'sans-serif' }}>
-      <div style={{ maxWidth: '800px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+      <div style={{ maxWidth: '850px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '20px' }}>
         
         {/* Header Tenant FJ Kids */}
         <div style={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', padding: '20px', borderRadius: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
           <div>
             <span style={{ backgroundColor: '#10b981', color: '#022c22', fontWeight: '900', fontSize: '11px', padding: '4px 10px', borderRadius: '6px', textTransform: 'uppercase' }}>
-              🟢 PEQUIX ERP CORE
+              🏛️ SALA B2B LIVE - JUNTA MONTERÍA
             </span>
-            <h1 style={{ fontSize: '1.4rem', fontWeight: '900', margin: '8px 0 0 0', color: '#ffffff' }}>Toma de Pedidos B2B & Motor Tarifario L1-L5</h1>
+            <h1 style={{ fontSize: '1.4rem', fontWeight: '900', margin: '8px 0 0 0', color: '#ffffff' }}>Holding El Palacio de la Pantaleta</h1>
             <p style={{ margin: '4px 0 0 0', color: '#94a3b8', fontSize: '12px' }}>
-              Asesor Comercial: <strong style={{ color: '#fbbf24' }}>Adrián Peña (USR-0001 / V2)</strong> — Tenant: EMP-0001 (FJ Kids)
+              Asesor Master: <strong style={{ color: '#fbbf24' }}>Adrián Peña (USR-0001 / V2)</strong> — Tenant: EMP-0001 (FJ Kids)
             </p>
           </div>
           <div style={{ backgroundColor: '#1e293b', padding: '12px 18px', borderRadius: '12px', textAlign: 'right' }}>
-            <span style={{ fontSize: '10px', color: '#94a3b8', display: 'block', textTransform: 'uppercase', fontWeight: 'bold' }}>Total Prendas:</span>
+            <span style={{ fontSize: '10px', color: '#94a3b8', display: 'block', textTransform: 'uppercase', fontWeight: 'bold' }}>Total Pedido Activo:</span>
             <span style={{ fontSize: '1.6rem', fontWeight: '900', color: '#fbbf24' }}>{totalPrendas} unds</span>
           </div>
+        </div>
+
+        {/* Selector de Almacén del Holding */}
+        <div style={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', padding: '20px', borderRadius: '16px' }}>
+          <label style={{ display: 'block', fontWeight: '800', fontSize: '12px', marginBottom: '8px', color: '#cbd5e1' }}>
+            🏬 Seleccionar Almacén del Holding para Cargar Pedido:
+          </label>
+          <select
+            value={almacenActivo}
+            onChange={(e) => setAlmacenActivo(e.target.value)}
+            style={{ width: '100%', backgroundColor: '#1e293b', border: '1px solid #334155', color: '#fbbf24', fontWeight: 'bold', padding: '12px', borderRadius: '10px', fontSize: '13px', outline: 'none' }}
+          >
+            {almacenesHolding.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.nombre} — {a.id}
+              </option>
+            ))}
+          </select>
+
+          {actual && (
+            <div style={{ marginTop: '12px', padding: '12px', backgroundColor: '#1e293b', borderRadius: '10px', fontSize: '11px', display: 'flex', justifyContent: 'space-between', color: '#94a3b8' }}>
+              <span>Razón Social: <strong style={{ color: '#ffffff' }}>{actual.razon}</strong></span>
+              <span>NIT Legal: <strong style={{ color: '#10b981' }}>{actual.nit}</strong></span>
+            </div>
+          )}
         </div>
 
         {/* Selector de Listas Dinámicas */}
         <div style={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', padding: '20px', borderRadius: '16px' }}>
           <label style={{ display: 'block', fontWeight: '800', fontSize: '12px', marginBottom: '12px', color: '#cbd5e1' }}>
-            🔄 Seleccionar Lista de Precios Dinámica en Vivo:
+            🔄 Lista Tarifaria Seleccionada para este Almacén:
           </label>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '10px' }}>
             {(['L1', 'L2', 'L4', 'L3'] as const).map((l) => (
@@ -75,7 +111,7 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Tabla Matriz de Productos */}
+        {/* Tabla Matriz */}
         <div style={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', padding: '20px', borderRadius: '16px', overflowX: 'auto' }}>
           <table style={{ width: '100%', textAlign: 'left', fontSize: '12px', borderCollapse: 'collapse' }}>
             <thead>
@@ -113,12 +149,12 @@ export default function Home() {
         {/* Total & Permisos Granulares */}
         <div style={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', padding: '20px', borderRadius: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px' }}>
           <div>
-            <span style={{ fontSize: '10px', color: '#94a3b8', textTransform: 'uppercase', display: 'block', fontWeight: 'bold' }}>Total Pedido Calculado:</span>
+            <span style={{ fontSize: '10px', color: '#94a3b8', textTransform: 'uppercase', display: 'block', fontWeight: 'bold' }}>Subtotal Almacén Activo ({actual?.id}):</span>
             <div style={{ fontSize: '1.8rem', fontWeight: '900', color: '#10b981' }}>
               {visibilidad === 'CON_VALORES' ? `$ ${subtotalCOP.toLocaleString('es-CO')} COP` : '🔒 TOTAL CONFIDENCIAL'}
             </div>
             <span style={{ fontSize: '12px', color: '#fbbf24', fontWeight: 'bold', display: 'block', marginTop: '4px' }}>
-              Comisión Asignada a Adrián Peña (6%): $ ${(subtotalCOP * 0.06).toLocaleString('es-CO')} COP
+              Comisión Adrián Peña (6%): $ ${(subtotalCOP * 0.06).toLocaleString('es-CO')} COP
             </span>
           </div>
 
@@ -130,7 +166,7 @@ export default function Home() {
               Solo Unitarios
             </button>
             <button onClick={() => setVisibilidad('SIN_VALORES')} style={{ padding: '10px 14px', borderRadius: '8px', border: 'none', fontWeight: 'bold', cursor: 'pointer', backgroundColor: visibilidad === 'SIN_VALORES' ? '#10b981' : '#1e293b', color: visibilidad === 'SIN_VALORES' ? '#022c22' : '#94a3b8' }}>
-              Sin Valores (Luz Deisy / Bodega)
+              Sin Valores (Bodega)
             </button>
           </div>
         </div>
