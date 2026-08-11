@@ -47,6 +47,9 @@ interface Producto {
   descripcion: string;
   curva: string;
   precio_L1_base: number;
+  mostrar_en_website: boolean;
+  override_L2?: number | null;
+  override_L4?: number | null;
 }
 
 interface Cliente {
@@ -57,284 +60,166 @@ interface Cliente {
   ciudad: string;
 }
 
+interface ConfigTenant {
+  deltaL2: number;
+  deltaL4: number;
+  comisionPorcentaje: number;
+  bodegaVerUnitario: boolean;
+  bodegaVerSubtotal: boolean;
+  bodegaVerTotal: boolean;
+}
+
 export default function Home() {
+  const [pestana, setPestana] = useState<'PEDIDOS' | 'INVENTARIO' | 'CONFIGURACION'>('INVENTARIO');
   const [rolActivo, setRolActivo] = useState<'ADMIN' | 'BODEGA'>('ADMIN');
   const [lista, setLista] = useState<'L1' | 'L2' | 'L3' | 'L4'>('L1');
+
+  // Parámetros Autogestionables del Tenant
+  const [config, setConfig] = useState<ConfigTenant>({
+    deltaL2: 1000,
+    deltaL4: -2000,
+    comisionPorcentaje: 6.0,
+    bodegaVerUnitario: true,
+    bodegaVerSubtotal: false,
+    bodegaVerTotal: false,
+  });
+
+  const [productos, setProductos] = useState<Producto[]>([
+    { referencia: '745', descripcion: 'CONJUNTO BEBE DORMILON', curva: 'BEBÉS', precio_L1_base: 59900, mostrar_en_website: true },
+    { referencia: '8182', descripcion: 'CONJUNTO BEBE PREMIUM', curva: 'BEBÉS', precio_L1_base: 70900, mostrar_en_website: true },
+    { referencia: '2552', descripcion: 'CONJUNTO JUNIOR BASICO', curva: 'JUNIOR', precio_L1_base: 43900, mostrar_en_website: true }
+  ]);
+
+  // Formulario de Nueva Referencia
+  const [nuevaRef, setNuevaRef] = useState('');
+  const [nuevaDesc, setNuevaDesc] = useState('');
+  const [nuevaCurva, setNuevaCurva] = useState('BEBÉS');
+  const [nuevoPrecio, setNuevoPrecio] = useState(50000);
+
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [clienteSeleccionado, setClienteSeleccionado] = useState<string>('');
   const [cantidades, setCantidades] = useState<{ [key: string]: number }>({ '745': 25, '8182': 30, '2552': 14 });
-  const [guardando, setGuardando] = useState(false);
   const [mensaje, setMensaje] = useState('');
-  const [ultimoCodigo, setUltimoCodigo] = useState('PED-3301');
-
-  // Deltas Parametrizables FJ Kids (EMP-0001)
-  const deltaL2 = 1000;
-  const deltaL4 = -2000;
-
-  const productos: Producto[] = [
-    { referencia: '745', descripcion: 'CONJUNTO BEBE DORMILON', curva: 'BEBÉS', precio_L1_base: 59900 },
-    { referencia: '8182', descripcion: 'CONJUNTO BEBE PREMIUM', curva: 'BEBÉS', precio_L1_base: 70900 },
-    { referencia: '2552', descripcion: 'CONJUNTO JUNIOR BASICO', curva: 'JUNIOR', precio_L1_base: 43900 }
-  ];
 
   useEffect(() => {
-    async function cargarClientes() {
-      const { data } = await supabase.from('clientes').select('*');
-      if (data && data.length > 0) {
-        setClientes(data);
-        setClienteSeleccionado(data[0].id);
+    async function cargarDatos() {
+      const { data: dataProds } = await supabase.from('productos').select('*');
+      if (dataProds && dataProds.length > 0) setProductos(dataProds);
+
+      const { data: dataClientes } = await supabase.from('clientes').select('*');
+      if (dataClientes && dataClientes.length > 0) {
+        setClientes(dataClientes);
+        setClienteSeleccionado(dataClientes[0].id);
       } else {
         const respaldo = [
           { id: '1', nit: '901164484-3', razon_social: 'Comercializadora Palacio S.A.S', nombre_comercial: 'El Palacio de la Pantaleta #1 Montería', ciudad: 'Montería' },
-          { id: '2', nit: '900314739-7', razon_social: 'Tendencias Futuristas S.A.S', nombre_comercial: 'La Media Naranja Montería', ciudad: 'Montería' },
-          { id: '3', nit: '900050852-7', razon_social: 'Inversiones La Pantaleta S.A.S', nombre_comercial: 'El Palacio de la Pantaleta #3 Montería', ciudad: 'Montería' }
+          { id: '2', nit: '900314739-7', razon_social: 'Tendencias Futuristas S.A.S', nombre_comercial: 'La Media Naranja Montería', ciudad: 'Montería' }
         ];
         setClientes(respaldo);
         setClienteSeleccionado('1');
       }
     }
-    cargarClientes();
+    cargarDatos();
   }, []);
 
   const actualCliente = clientes.find(c => c.id === clienteSeleccionado);
 
-  const getPrecio = (base: number) => {
-    if (lista === 'L2') return base + deltaL2;
-    if (lista === 'L4') return base + deltaL4;
-    if (lista === 'L3') return Math.round((base * 1.7) / 100) * 100 - 100;
-    return base;
+  const getPrecio = (p: Producto) => {
+    if (lista === 'L2') return p.override_L2 ?? (p.precio_L1_base + config.deltaL2);
+    if (lista === 'L4') return p.override_L4 ?? (p.precio_L1_base + config.deltaL4);
+    if (lista === 'L3') return Math.round((p.precio_L1_base * 1.7) / 100) * 100 - 100;
+    return p.precio_L1_base;
   };
 
-  const handleCantidadChange = (ref: string, val: number) => {
-    setCantidades(prev => ({ ...prev, [ref]: Math.max(0, val) }));
+  // Crear Nueva Referencia Textil
+  const agregarProducto = async () => {
+    if (!nuevaRef || !nuevaDesc) {
+      setMensaje('⚠️ Por favor completa la Referencia y la Descripción.');
+      return;
+    }
+
+    const prodNuevo: Producto = {
+      referencia: nuevaRef,
+      descripcion: nuevaDesc.toUpperCase(),
+      curva: nuevaCurva,
+      precio_L1_base: nuevoPrecio,
+      mostrar_en_website: true
+    };
+
+    setProductos(prev => [...prev, prodNuevo]);
+
+    // Persistir en Supabase
+    await supabase.from('productos').insert([{
+      tenant_id: 'EMP-0001',
+      referencia: nuevaRef,
+      descripcion: nuevaDesc.toUpperCase(),
+      curva: nuevaCurva,
+      precio_L1_base: nuevoPrecio,
+      mostrar_en_website: true
+    }]);
+
+    // Registrar en Audit Log
+    await supabase.from('audit_logs').insert([{
+      tenant_id: 'EMP-0001',
+      usuario_id: 'USR-0001',
+      usuario_nombre: 'Adrián Peña',
+      accion: 'CREAR_PRODUCTO_TEXTIL',
+      entidad_afectada: 'PRODUCTOS',
+      entidad_id: nuevaRef,
+      valor_nuevo: prodNuevo
+    }]);
+
+    setMensaje(`✨ ¡Referencia ${nuevaRef} (${nuevaDesc.toUpperCase()}) creada exitosamente!`);
+    setNuevaRef('');
+    setNuevaDesc('');
+  };
+
+  // Toggle Switch Website B2B/B2C
+  const toggleWebsite = async (ref: string, estadoActual: boolean) => {
+    const nuevoEstado = !estadoActual;
+    setProductos(prev => prev.map(p => p.referencia === ref ? { ...p, mostrar_en_website: nuevoEstado } : p));
+
+    await supabase.from('audit_logs').insert([{
+      tenant_id: 'EMP-0001',
+      usuario_id: 'USR-0001',
+      usuario_nombre: 'Adrián Peña',
+      accion: 'TOGGLE_VISIBILIDAD_WEB',
+      entidad_afectada: 'PRODUCTOS',
+      entidad_id: ref,
+      valor_nuevo: { referencia: ref, visible_web: nuevoEstado, fecha: new Date().toISOString() }
+    }]);
+
+    setMensaje(`🌐 Visibilidad Web de REF ${ref} actualizada a: ${nuevoEstado ? 'Visible' : 'Oculto'}`);
   };
 
   const totalPrendas = Object.values(cantidades).reduce((a, b) => a + b, 0);
-  const subtotalCOP = productos.reduce((acc, p) => acc + ((cantidades[p.referencia] || 0) * getPrecio(p.precio_L1_base)), 0);
-  const comisionCOP = subtotalCOP * 0.06;
-
-  // Cambiar Rol con Registro de Auditoría Inmutable
-  const cambiarRol = async (nuevoRol: 'ADMIN' | 'BODEGA') => {
-    setRolActivo(nuevoRol);
-    await supabase.from('audit_logs').insert([
-      {
-        tenant_id: 'EMP-0001',
-        usuario_id: nuevoRol === 'ADMIN' ? 'USR-0001' : 'USR-0002',
-        usuario_nombre: nuevoRol === 'ADMIN' ? 'Adrián Peña' : 'Luz Deisy (Bodega)',
-        accion: 'CAMBIO_ROL_VISTA',
-        entidad_afectada: 'PERMISOS',
-        entidad_id: nuevoRol,
-        valor_nuevo: { rol: nuevoRol, fecha: new Date().toISOString() }
-      }
-    ]);
-  };
-
-  // Guardar Pedido en PostgreSQL & Audit Log
-  const guardarPedido = async () => {
-    try {
-      setGuardando(true);
-      setMensaje('');
-      const codigoOrder = `PED-${Math.floor(1000 + Math.random() * 9000)}`;
-      setUltimoCodigo(codigoOrder);
-
-      await supabase.from('pedidos').insert([
-        {
-          tenant_id: 'EMP-0001',
-          codigo_pedido: codigoOrder,
-          cliente_id: clienteSeleccionado,
-          vendedor_id: rolActivo === 'ADMIN' ? 'USR-0001' : 'USR-0002',
-          vendedor_nombre: rolActivo === 'ADMIN' ? 'Adrián Peña' : 'Luz Deisy (Bodega)',
-          lista_aplicada: lista,
-          total_prendas: totalPrendas,
-          subtotal_cop: subtotalCOP,
-          comision_cop: comisionCOP,
-          estado: 'CONFIRMADO'
-        }
-      ]);
-
-      await supabase.from('audit_logs').insert([
-        {
-          tenant_id: 'EMP-0001',
-          usuario_id: rolActivo === 'ADMIN' ? 'USR-0001' : 'USR-0002',
-          usuario_nombre: rolActivo === 'ADMIN' ? 'Adrián Peña' : 'Luz Deisy (Bodega)',
-          accion: 'CREAR_PEDIDO_B2B',
-          entidad_afectada: 'PEDIDOS',
-          entidad_id: codigoOrder,
-          valor_nuevo: {
-            cliente: actualCliente?.nombre_comercial,
-            nit: actualCliente?.nit,
-            total_prendas: totalPrendas,
-            total_cop: rolActivo === 'ADMIN' ? subtotalCOP : 'SUBTOTALES_OCULTOS_BODEGA',
-            lista_aplicada: lista,
-            fecha: new Date().toISOString()
-          }
-        }
-      ]);
-
-      setMensaje(`🎉 ¡Pedido ${codigoOrder} Confirmado y Registrado en PostgreSQL & Audit Log!`);
-    } catch (err) {
-      setMensaje('❌ Error al registrar el pedido en la base de datos.');
-    } finally {
-      setGuardando(false);
-    }
-  };
-
-  // Generador PDF Nombrado Dinámicamente según Rol
-  const descargarPDFReal = () => {
-    const nombreClienteLimpio = (actualCliente?.nombre_comercial || 'Cliente')
-      .replace(/[^a-zA-Z0-9]/g, '_')
-      .replace(/_+/g, '_');
-    
-    const nombreArchivoPDF = `${ultimoCodigo}_${nombreClienteLimpio}`;
-
-    const ventana = window.open('', '_blank');
-    if (!ventana) return;
-
-    const filasHtml = productos.map(p => {
-      const u = getPrecio(p.precio_L1_base);
-      const cant = cantidades[p.referencia] || 0;
-      return `
-        <tr>
-          <td style="padding: 8px; border-bottom: 1px solid #ddd; font-weight: bold;">${p.referencia}</td>
-          <td style="padding: 8px; border-bottom: 1px solid #ddd;">${p.descripcion}</td>
-          <td style="padding: 8px; border-bottom: 1px solid #ddd;">${p.curva}</td>
-          <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: center;">${cant} unds</td>
-          <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right; font-weight: bold;">$ ${u.toLocaleString('es-CO')}</td>
-          <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right; font-weight: bold; color: ${rolActivo === 'ADMIN' ? '#10b981' : '#94a3b8'};">
-            ${rolActivo === 'ADMIN' ? `$ ${(cant * u).toLocaleString('es-CO')}` : '🔒 Oculto'}
-          </td>
-        </tr>
-      `;
-    }).join('');
-
-    const htmlCompleto = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <title>${nombreArchivoPDF}</title>
-        <style>
-          @page { size: auto; margin: 15mm; }
-          body { font-family: Arial, sans-serif; padding: 20px; color: #1e293b; }
-          .header { display: flex; justify-content: space-between; border-bottom: 2px solid #10b981; padding-bottom: 15px; margin-bottom: 20px; }
-          .title { font-size: 18px; font-weight: bold; color: #0f172a; }
-          .subtitle { font-size: 12px; color: #64748b; }
-          .info-box { background-color: #f8fafc; border: 1px solid #e2e8f0; padding: 15px; border-radius: 8px; margin-bottom: 20px; font-size: 13px; }
-          table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 20px; }
-          th { background-color: #0f172a; color: #ffffff; text-align: left; padding: 10px 8px; }
-          .total-box { text-align: right; font-size: 18px; font-weight: bold; color: #10b981; margin-top: 20px; }
-          .footer { margin-top: 40px; text-align: center; font-size: 11px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 10px; }
-        </style>
-      </head>
-      <body>
-        <div class="header">
-          <div>
-            <div class="title">PEQUIX ERP · COMPROBANTE DE PEDIDO FORMAL</div>
-            <div class="subtitle">Tenant: EMP-0001 (FJ Kids) — Usuario: ${rolActivo === 'ADMIN' ? 'Adrián Peña (Admin)' : 'Luz Deisy (Bodega)'}</div>
-          </div>
-          <div style="text-align: right;">
-            <div style="font-size: 16px; font-weight: bold; color: #d97706;">${ultimoCodigo}</div>
-            <div class="subtitle">${new Date().toLocaleDateString('es-CO')}</div>
-          </div>
-        </div>
-
-        <div class="info-box">
-          <strong>Sucursal / Cliente:</strong> ${actualCliente?.nombre_comercial}<br/>
-          <strong>Razón Social:</strong> ${actualCliente?.razon_social}<br/>
-          <strong>NIT:</strong> ${actualCliente?.nit}<br/>
-          <strong>Lista Aplicada:</strong> ${lista}
-        </div>
-
-        <table>
-          <thead>
-            <tr>
-              <th>REF</th>
-              <th>DESCRIPCIÓN</th>
-              <th>CURVA</th>
-              <th style="text-align: center;">CANTIDAD</th>
-              <th style="text-align: right;">UNITARIO ($ COP)</th>
-              <th style="text-align: right;">SUBTOTAL ($ COP)</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${filasHtml}
-          </tbody>
-        </table>
-
-        <div class="total-box">
-          TOTAL PRENDAS: ${totalPrendas} unds<br/>
-          ${rolActivo === 'ADMIN' ? `TOTAL PEDIDO: $ ${subtotalCOP.toLocaleString('es-CO')} COP` : 'TOTAL PEDIDO: 🔒 OCULTO BODEGA'}
-        </div>
-
-        <div class="footer">
-          Generado automáticamente por Pequix ERP SaaS · Medellín, Colombia
-        </div>
-
-        <script>
-          document.title = "${nombreArchivoPDF}";
-          window.onload = function() {
-            setTimeout(function() {
-              window.print();
-            }, 300);
-          };
-        </script>
-      </body>
-      </html>
-    `;
-
-    ventana.document.write(htmlCompleto);
-    ventana.document.close();
-  };
+  const subtotalCOP = productos.reduce((acc, p) => acc + ((cantidades[p.referencia] || 0) * getPrecio(p)), 0);
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#090d16', color: '#f8fafc', padding: '20px', fontFamily: 'sans-serif' }}>
       <div style={{ maxWidth: '850px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '20px' }}>
         
-        {/* Header Tenant & Selector de Perfil/Rol */}
+        {/* Header Tenant FJ Kids */}
         <div style={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', padding: '20px', borderRadius: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
           <div>
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '6px' }}>
-              <span style={{ backgroundColor: '#10b981', color: '#022c22', fontWeight: '900', fontSize: '11px', padding: '4px 10px', borderRadius: '6px', textTransform: 'uppercase' }}>
-                🟢 PEQUIX ERP CORE · PERMISOS REFINADOS
-              </span>
-            </div>
-            <h1 style={{ fontSize: '1.4rem', fontWeight: '900', margin: '4px 0 0 0', color: '#ffffff' }}>Control de Accesos & Despacho Ciego</h1>
+            <span style={{ backgroundColor: '#10b981', color: '#022c22', fontWeight: '900', fontSize: '11px', padding: '4px 10px', borderRadius: '6px', textTransform: 'uppercase' }}>
+              🟢 PEQUIX ERP CORE · INVENTARIO MATRIZ
+            </span>
+            <h1 style={{ fontSize: '1.4rem', fontWeight: '900', margin: '8px 0 0 0', color: '#ffffff' }}>Inventario Textil Infantil & Curvas</h1>
             <p style={{ margin: '4px 0 0 0', color: '#94a3b8', fontSize: '12px' }}>
-              Usuario Activo: <strong style={{ color: '#fbbf24' }}>{rolActivo === 'ADMIN' ? 'Adrián Peña (USR-0001 / Admin)' : 'Luz Deisy (USR-0002 / Bodega)'}</strong> — EMP-0001 (FJ Kids)
+              Usuario: <strong style={{ color: '#fbbf24' }}>Adrián Peña (USR-0001 / Admin)</strong> — EMP-0001 (FJ Kids)
             </p>
           </div>
 
-          {/* Switch de Rol en Vivo */}
-          <div style={{ backgroundColor: '#1e293b', padding: '8px', borderRadius: '12px', display: 'flex', gap: '6px' }}>
-            <button
-              onClick={() => cambiarRol('ADMIN')}
-              style={{
-                padding: '8px 14px',
-                borderRadius: '8px',
-                border: 'none',
-                fontWeight: '900',
-                fontSize: '11px',
-                cursor: 'pointer',
-                backgroundColor: rolActivo === 'ADMIN' ? '#10b981' : 'transparent',
-                color: rolActivo === 'ADMIN' ? '#022c22' : '#94a3b8'
-              }}
-            >
-              👑 Admin / Vendedor
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            <button onClick={() => setPestana('INVENTARIO')} style={{ padding: '10px 14px', borderRadius: '10px', border: 'none', fontWeight: 'bold', fontSize: '12px', cursor: 'pointer', backgroundColor: pestana === 'INVENTARIO' ? '#10b981' : '#1e293b', color: pestana === 'INVENTARIO' ? '#022c22' : '#ffffff' }}>
+              👕 Inventario
             </button>
-            <button
-              onClick={() => cambiarRol('BODEGA')}
-              style={{
-                padding: '8px 14px',
-                borderRadius: '8px',
-                border: 'none',
-                fontWeight: '900',
-                fontSize: '11px',
-                cursor: 'pointer',
-                backgroundColor: rolActivo === 'BODEGA' ? '#f59e0b' : 'transparent',
-                color: rolActivo === 'BODEGA' ? '#451a03' : '#94a3b8'
-              }}
-            >
-              📦 Bodega (Vista Ciega)
+            <button onClick={() => setPestana('PEDIDOS')} style={{ padding: '10px 14px', borderRadius: '10px', border: 'none', fontWeight: 'bold', fontSize: '12px', cursor: 'pointer', backgroundColor: pestana === 'PEDIDOS' ? '#38bdf8' : '#1e293b', color: pestana === 'PEDIDOS' ? '#022c22' : '#ffffff' }}>
+              🛒 Pedidos B2B
+            </button>
+            <button onClick={() => setPestana('CONFIGURACION')} style={{ padding: '10px 14px', borderRadius: '10px', border: 'none', fontWeight: 'bold', fontSize: '12px', cursor: 'pointer', backgroundColor: pestana === 'CONFIGURACION' ? '#fbbf24' : '#1e293b', color: pestana === 'CONFIGURACION' ? '#022c22' : '#ffffff' }}>
+              ⚙️ Config
             </button>
           </div>
         </div>
@@ -345,129 +230,121 @@ export default function Home() {
           </div>
         )}
 
-        {/* Selector CRM de Clientes */}
-        <div style={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', padding: '20px', borderRadius: '16px' }}>
-          <label style={{ display: 'block', fontWeight: '800', fontSize: '12px', marginBottom: '8px', color: '#cbd5e1' }}>
-            👤 Seleccionar Cliente del CRM (Holding Textil Montería):
-          </label>
-          <select
-            value={clienteSeleccionado}
-            onChange={(e) => setClienteSeleccionado(e.target.value)}
-            style={{ width: '100%', backgroundColor: '#1e293b', border: '1px solid #334155', color: '#fbbf24', fontWeight: 'bold', padding: '12px', borderRadius: '10px', fontSize: '13px', outline: 'none' }}
-          >
-            {clientes.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.nombre_comercial} — NIT: {c.nit}
-              </option>
-            ))}
-          </select>
+        {/* PESTAÑA: INVENTARIO TEXTIL AVANZADO */}
+        {pestana === 'INVENTARIO' && (
+          <>
+            {/* Formulario de Creación de Prendas */}
+            <div style={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', padding: '20px', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
+              <h2 style={{ fontSize: '1.1rem', fontWeight: '900', color: '#10b981', margin: 0 }}>
+                ➕ Crear Nueva Referencia Textil Infantil
+              </h2>
 
-          {actualCliente && (
-            <div style={{ marginTop: '12px', padding: '12px', backgroundColor: '#1e293b', borderRadius: '10px', fontSize: '11px', display: 'flex', justifyContent: 'space-between', color: '#94a3b8' }}>
-              <span>Razón Social: <strong style={{ color: '#ffffff' }}>{actualCliente.razon_social}</strong></span>
-              <span>Ciudad: <strong style={{ color: '#10b981' }}>{actualCliente.ciudad}</strong></span>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', color: '#cbd5e1', marginBottom: '4px', fontWeight: 'bold' }}>Referencia (REF):</label>
+                  <input
+                    type="text"
+                    placeholder="Ej: 9021"
+                    value={nuevaRef}
+                    onChange={(e) => setNuevaRef(e.target.value)}
+                    style={{ width: '100%', backgroundColor: '#1e293b', border: '1px solid #334155', color: '#fbbf24', padding: '10px', borderRadius: '8px', fontWeight: 'bold', outline: 'none' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', color: '#cbd5e1', marginBottom: '4px', fontWeight: 'bold' }}>Descripción de la Prenda:</label>
+                  <input
+                    type="text"
+                    placeholder="Ej: OVEROL JEAN INFANTIL"
+                    value={nuevaDesc}
+                    onChange={(e) => setNuevaDesc(e.target.value)}
+                    style={{ width: '100%', backgroundColor: '#1e293b', border: '1px solid #334155', color: '#ffffff', padding: '10px', borderRadius: '8px', fontWeight: 'bold', outline: 'none' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', color: '#cbd5e1', marginBottom: '4px', fontWeight: 'bold' }}>Curva de Tallas:</label>
+                  <select
+                    value={nuevaCurva}
+                    onChange={(e) => setNuevaCurva(e.target.value)}
+                    style={{ width: '100%', backgroundColor: '#1e293b', border: '1px solid #334155', color: '#ffffff', padding: '10px', borderRadius: '8px', fontWeight: 'bold', outline: 'none' }}
+                  >
+                    <option value="BEBÉS">BEBÉS (0-24M)</option>
+                    <option value="MESES">MESES (2-6T)</option>
+                    <option value="JUNIOR">JUNIOR (8-16)</option>
+                    <option value="INFANTIL">INFANTIL GLOBAL</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', color: '#cbd5e1', marginBottom: '4px', fontWeight: 'bold' }}>Precio L1 Mayorista Base ($ COP):</label>
+                  <input
+                    type="number"
+                    step="1000"
+                    value={nuevoPrecio}
+                    onChange={(e) => setNuevoPrecio(parseInt(e.target.value) || 0)}
+                    style={{ width: '100%', backgroundColor: '#1e293b', border: '1px solid #334155', color: '#10b981', padding: '10px', borderRadius: '8px', fontWeight: 'bold', outline: 'none' }}
+                  />
+                </div>
+              </div>
+
+              <button
+                onClick={agregarProducto}
+                style={{ padding: '12px', backgroundColor: '#10b981', color: '#022c22', border: 'none', borderRadius: '10px', fontWeight: '900', cursor: 'pointer', fontSize: '13px' }}
+              >
+                💾 Guardar Referencia en PostgreSQL
+              </button>
             </div>
-          )}
-        </div>
 
-        {/* Tabla Matriz de Productos con Permisos Granulares Refinados */}
-        <div style={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', padding: '20px', borderRadius: '16px', overflowX: 'auto' }}>
-          <table style={{ width: '100%', textAlign: 'left', fontSize: '12px', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ borderBottom: '1px solid #1e293b', color: '#94a3b8' }}>
-                <th style={{ padding: '10px 8px' }}>REF</th>
-                <th style={{ padding: '10px 8px' }}>DESCRIPCIÓN</th>
-                <th style={{ padding: '10px 8px' }}>CURVA</th>
-                <th style={{ padding: '10px 8px', textAlign: 'center' }}>CANT. PRENDAS</th>
-                <th style={{ padding: '10px 8px', textAlign: 'right' }}>UNITARIO ($ COP)</th>
-                <th style={{ padding: '10px 8px', textAlign: 'right' }}>SUBTOTAL ($ COP)</th>
-              </tr>
-            </thead>
-            <tbody>
-              {productos.map((p) => {
-                const u = getPrecio(p.precio_L1_base);
-                const cant = cantidades[p.referencia] || 0;
-                return (
-                  <tr key={p.referencia} style={{ borderBottom: '1px solid #1e293b' }}>
-                    <td style={{ padding: '12px 8px', fontWeight: '900', color: '#fbbf24' }}>{p.referencia}</td>
-                    <td style={{ padding: '12px 8px', fontWeight: 'bold' }}>{p.descripcion}</td>
-                    <td style={{ padding: '12px 8px', color: '#94a3b8' }}>{p.curva}</td>
-                    <td style={{ padding: '12px 8px', textAlign: 'center' }}>
-                      <input
-                        type="number"
-                        value={cant}
-                        onChange={(e) => handleCantidadChange(p.referencia, parseInt(e.target.value) || 0)}
-                        style={{ width: '60px', backgroundColor: '#1e293b', border: '1px solid #334155', color: '#10b981', fontWeight: '900', textAlign: 'center', padding: '6px', borderRadius: '6px', outline: 'none' }}
-                      />
-                    </td>
-                    {/* Valor Unitario visible para ambos roles */}
-                    <td style={{ padding: '12px 8px', textAlign: 'right', fontWeight: 'bold', color: '#ffffff' }}>
-                      $ {u.toLocaleString('es-CO')}
-                    </td>
-                    {/* Subtotal por referencia oculto para Bodega */}
-                    <td style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '900', color: rolActivo === 'ADMIN' ? '#10b981' : '#94a3b8' }}>
-                      {rolActivo === 'ADMIN' ? `$ ${(cant * u).toLocaleString('es-CO')}` : '🔒 Oculto'}
-                    </td>
+            {/* Tabla Matriz de Inventario */}
+            <div style={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', padding: '20px', borderRadius: '16px', overflowX: 'auto' }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: '900', color: '#fbbf24', margin: '0 0 15px 0' }}>
+                📦 Catálogo Matriz Activo ({productos.length} Referencias)
+              </h3>
+
+              <table style={{ width: '100%', textAlign: 'left', fontSize: '12px', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid #1e293b', color: '#94a3b8' }}>
+                    <th style={{ padding: '10px 8px' }}>REF</th>
+                    <th style={{ padding: '10px 8px' }}>DESCRIPCIÓN</th>
+                    <th style={{ padding: '10px 8px' }}>CURVA</th>
+                    <th style={{ padding: '10px 8px', textAlign: 'center' }}>MOSTRAR EN WEBSITE</th>
+                    <th style={{ padding: '10px 8px', textAlign: 'right' }}>L1 MAYORISTA ($ COP)</th>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Resumen Financiero Dinámico según el Rol */}
-        <div style={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', padding: '20px', borderRadius: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px' }}>
-          <div>
-            <span style={{ fontSize: '10px', color: '#94a3b8', textTransform: 'uppercase', display: 'block', fontWeight: 'bold' }}>Total Calculado del Pedido:</span>
-            <div style={{ fontSize: '1.8rem', fontWeight: '900', color: rolActivo === 'ADMIN' ? '#10b981' : '#f59e0b' }}>
-              {rolActivo === 'ADMIN' ? `$ ${subtotalCOP.toLocaleString('es-CO')} COP` : '🔒 TOTAL CONFIDENCIAL BODEGA'}
+                </thead>
+                <tbody>
+                  {productos.map((p) => (
+                    <tr key={p.referencia} style={{ borderBottom: '1px solid #1e293b' }}>
+                      <td style={{ padding: '12px 8px', fontWeight: '900', color: '#fbbf24' }}>{p.referencia}</td>
+                      <td style={{ padding: '12px 8px', fontWeight: 'bold' }}>{p.descripcion}</td>
+                      <td style={{ padding: '12px 8px', color: '#94a3b8' }}>{p.curva}</td>
+                      <td style={{ padding: '12px 8px', textAlign: 'center' }}>
+                        <button
+                          onClick={() => toggleWebsite(p.referencia, p.mostrar_en_website)}
+                          style={{
+                            padding: '6px 12px',
+                            borderRadius: '8px',
+                            border: 'none',
+                            fontWeight: 'bold',
+                            fontSize: '11px',
+                            cursor: 'pointer',
+                            backgroundColor: p.mostrar_en_website ? '#064e3b' : '#881337',
+                            color: p.mostrar_en_website ? '#34d399' : '#f43f5e'
+                          }}
+                        >
+                          {p.mostrar_en_website ? '🌐 Sí (Visible B2B/B2C)' : '🔒 No (Oculto)'}
+                        </button>
+                      </td>
+                      <td style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '900', color: '#10b981' }}>
+                        $ {p.precio_L1_base.toLocaleString('es-CO')}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-            {rolActivo === 'ADMIN' ? (
-              <span style={{ fontSize: '12px', color: '#fbbf24', fontWeight: 'bold', display: 'block', marginTop: '4px' }}>
-                Comisión Asignada a Adrián Peña (6%): $ ${comisionCOP.toLocaleString('es-CO')} COP
-              </span>
-            ) : (
-              <span style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 'bold', display: 'block', marginTop: '4px' }}>
-                Modo Alistamiento de Despacho: {totalPrendas} prendas por empacar.
-              </span>
-            )}
-          </div>
-
-          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-            <button
-              onClick={guardarPedido}
-              disabled={guardando}
-              style={{
-                padding: '12px 18px',
-                borderRadius: '10px',
-                border: 'none',
-                fontWeight: '900',
-                cursor: 'pointer',
-                backgroundColor: '#10b981',
-                color: '#022c22',
-                fontSize: '12px'
-              }}
-            >
-              {guardando ? '⏳ Guardando...' : '💾 Confirmar Pedido'}
-            </button>
-
-            <button
-              onClick={descargarPDFReal}
-              style={{
-                padding: '12px 18px',
-                borderRadius: '10px',
-                border: '1px solid #38bdf8',
-                fontWeight: '900',
-                cursor: 'pointer',
-                backgroundColor: '#0284c7',
-                color: '#ffffff',
-                fontSize: '12px'
-              }}
-            >
-              📄 Generar PDF Nombrado
-            </button>
-          </div>
-        </div>
+          </>
+        )}
 
       </div>
     </div>
