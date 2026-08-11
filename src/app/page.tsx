@@ -57,9 +57,9 @@ export default function Home() {
   const [carrito, setCarrito] = useState<{ [key: string]: number }>({});
   const [mensaje, setMensaje] = useState('');
 
-  // Credenciales Oficiales de Wompi Producción Real (FJ Kids / Automerco)
-  const wompiPublicKey = 'pub_prod_nNuIXKqeLhROFF29YF7UIVBMItu6ryaN';
-  const wompiIntegritySecret = 'prod_integrity_QxT16dnySpZOAlp7ME2kgPzA7Yz1GX9I';
+  // Lectura de Llaves desde Vercel con Valores de Respaldo Producción
+  const wompiPublicKey = process.env.NEXT_PUBLIC_WOMPI_PUBLIC_KEY || 'pub_prod_nNuIXKqeLhROFF29YF7UIVBMItu6ryaN';
+  const wompiIntegritySecret = process.env.NEXT_PUBLIC_WOMPI_INTEGRITY_SECRET || 'prod_integrity_QxT16dnySpZOAlp7ME2kgPzA7Yz1GX9I';
 
   const [productos, setProductos] = useState<Producto[]>([
     { referencia: '745', descripcion: 'CONJUNTO BEBE DORMILON', curva: 'BEBÉS', precio_L1_base: 59900, mostrar_en_website: true },
@@ -98,7 +98,7 @@ export default function Home() {
     setMensaje(`🎉 Tarifa L1 Mayorista activada para NIT: ${nitMayorista}`);
   };
 
-  // Generador de Hash SHA-256 Exigido por Wompi Producción
+  // Generación Nativa de Hash SHA-256
   async function generarFirmaSHA256(cadena: string) {
     const enco = new TextEncoder();
     const data = enco.encode(cadena);
@@ -107,7 +107,7 @@ export default function Home() {
     return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
   }
 
-  // Checkout Directo con Firma de Integridad Calculada
+  // Redirección Directa a Checkout Wompi con Firma Calculada
   const pagarConWompiDirecto = async () => {
     if (totalPagarCOP === 0) {
       setMensaje('⚠️ El carrito está vacío.');
@@ -129,7 +129,7 @@ export default function Home() {
       estado: 'PENDIENTE_PAGO_WOMPI'
     }]);
 
-    // Estructura Hash SHA-256: Referencia + MontoCentavos + Moneda + SecretoIntegridad
+    // Cadena SHA-256: Referencia + MontoCentavos + Moneda + SecretoIntegridad
     const cadenaFirma = `${referenciaWompi}${valorEnCentavos}${moneda}${wompiIntegritySecret}`;
     const firmaSHA256 = await generarFirmaSHA256(cadenaFirma);
 
@@ -152,7 +152,7 @@ export default function Home() {
             </span>
             <h1 style={{ fontSize: '1.4rem', fontWeight: '900', margin: '8px 0 0 0', color: '#ffffff' }}>Colección Infantil Confección Colombiana</h1>
             <p style={{ margin: '4px 0 0 0', color: '#94a3b8', fontSize: '12px' }}>
-              Pasarela Oficial Integrada con <strong style={{ color: '#10b981' }}>Wompi Colombia ($ COP)</strong>
+              Pasarela en <strong style={{ color: '#10b981' }}>Producción Oficial Wompi Colombia ($ COP)</strong>
             </p>
           </div>
 
