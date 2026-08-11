@@ -57,8 +57,8 @@ export default function Home() {
   const [carrito, setCarrito] = useState<{ [key: string]: number }>({});
   const [mensaje, setMensaje] = useState('');
 
-  // Clave Pública de Wompi (Asignar la real en Vercel o ingresar aquí)
-  const wompiPublicKey = process.env.NEXT_PUBLIC_WOMPI_PUBLIC_KEY || 'pub_test_Q5y152W2BWhM234567890'; 
+  // Llave Pública Real de Wompi Colombia
+  const wompiPublicKey = process.env.NEXT_PUBLIC_WOMPI_PUBLIC_KEY || 'pub_prod_nNuIXKqeLhROFF29YF7UIVBMItu6ryaN'; 
 
   const [productos, setProductos] = useState<Producto[]>([
     { referencia: '745', descripcion: 'CONJUNTO BEBE DORMILON', curva: 'BEBÉS', precio_L1_base: 59900, mostrar_en_website: true },
@@ -74,7 +74,7 @@ export default function Home() {
     }
     cargar();
 
-    // Cargar Script Oficial de Wompi Widget
+    // Inyectar Widget Oficial de Wompi
     const script = document.createElement('script');
     script.src = 'https://checkout.wompi.co/widget.js';
     script.async = true;
@@ -103,7 +103,7 @@ export default function Home() {
     setMensaje(`🎉 Tarifa L1 Mayorista activada para NIT: ${nitMayorista}`);
   };
 
-  // Disparar Pasarela Oficial de Wompi Widget Real
+  // Abrir Modal Oficial de Wompi con la Llave de Producción
   const abrirWompiReal = () => {
     if (totalPagarCOP === 0) {
       setMensaje('⚠️ El carrito está vacío.');
@@ -111,7 +111,7 @@ export default function Home() {
     }
 
     const referenciaWompi = `PED-${Date.now()}`;
-    const valorEnCentavos = totalPagarCOP * 100; // Wompi procesa en centavos COP
+    const valorEnCentavos = totalPagarCOP * 100;
 
     // @ts-ignore
     if (typeof WidgetCheckout !== 'undefined') {
@@ -126,7 +126,7 @@ export default function Home() {
 
       checkout.open(async (result: any) => {
         const transaction = result.transaction;
-        if (transaction.status === 'APPROVED') {
+        if (transaction && transaction.status === 'APPROVED') {
           await supabase.from('pedidos').insert([{
             tenant_id: 'EMP-0001',
             codigo_pedido: referenciaWompi,
@@ -142,7 +142,7 @@ export default function Home() {
         }
       });
     } else {
-      setMensaje('⏳ Cargando pasarela Wompi... Intenta en 3 segundos.');
+      setMensaje('⏳ Cargando pasarela Wompi... Intenta de nuevo en un segundo.');
     }
   };
 
@@ -158,7 +158,7 @@ export default function Home() {
             </span>
             <h1 style={{ fontSize: '1.4rem', fontWeight: '900', margin: '8px 0 0 0', color: '#ffffff' }}>Colección Infantil Confección Colombiana</h1>
             <p style={{ margin: '4px 0 0 0', color: '#94a3b8', fontSize: '12px' }}>
-              Pagos 100% Seguros con <strong style={{ color: '#fbbf24' }}>Pasarela Wompi Colombia ($ COP)</strong>
+              Pasarela Oficial Integrada con <strong style={{ color: '#fbbf24' }}>Wompi Colombia ($ COP)</strong>
             </p>
           </div>
 
