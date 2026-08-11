@@ -113,7 +113,7 @@ export default function Home() {
   const subtotalCOP = productos.reduce((acc, p) => acc + ((cantidades[p.referencia] || 0) * getPrecio(p.precio_L1_base)), 0);
   const comisionCOP = subtotalCOP * 0.06;
 
-  // Cambiar Rol con Registro de Auditoría
+  // Cambiar Rol con Registro de Auditoría Inmutable
   const cambiarRol = async (nuevoRol: 'ADMIN' | 'BODEGA') => {
     setRolActivo(nuevoRol);
     await supabase.from('audit_logs').insert([
@@ -164,7 +164,7 @@ export default function Home() {
             cliente: actualCliente?.nombre_comercial,
             nit: actualCliente?.nit,
             total_prendas: totalPrendas,
-            total_cop: rolActivo === 'ADMIN' ? subtotalCOP : 'OCULTO_BODEGA',
+            total_cop: rolActivo === 'ADMIN' ? subtotalCOP : 'SUBTOTALES_OCULTOS_BODEGA',
             lista_aplicada: lista,
             fecha: new Date().toISOString()
           }
@@ -179,7 +179,7 @@ export default function Home() {
     }
   };
 
-  // Generador PDF Nombrado Dinámicamente
+  // Generador PDF Nombrado Dinámicamente según Rol
   const descargarPDFReal = () => {
     const nombreClienteLimpio = (actualCliente?.nombre_comercial || 'Cliente')
       .replace(/[^a-zA-Z0-9]/g, '_')
@@ -199,13 +199,10 @@ export default function Home() {
           <td style="padding: 8px; border-bottom: 1px solid #ddd;">${p.descripcion}</td>
           <td style="padding: 8px; border-bottom: 1px solid #ddd;">${p.curva}</td>
           <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: center;">${cant} unds</td>
-          ${rolActivo === 'ADMIN' ? `
-            <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right;">$ ${u.toLocaleString('es-CO')}</td>
-            <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right; font-weight: bold; color: #10b981;">$ ${(cant * u).toLocaleString('es-CO')}</td>
-          ` : `
-            <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right; color: #94a3b8;">🔒 Oculto</td>
-            <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right; color: #94a3b8;">🔒 Oculto</td>
-          `}
+          <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right; font-weight: bold;">$ ${u.toLocaleString('es-CO')}</td>
+          <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right; font-weight: bold; color: ${rolActivo === 'ADMIN' ? '#10b981' : '#94a3b8'};">
+            ${rolActivo === 'ADMIN' ? `$ ${(cant * u).toLocaleString('es-CO')}` : '🔒 Oculto'}
+          </td>
         </tr>
       `;
     }).join('');
@@ -233,7 +230,7 @@ export default function Home() {
         <div class="header">
           <div>
             <div class="title">PEQUIX ERP · COMPROBANTE DE PEDIDO FORMAL</div>
-            <div class="subtitle">Tenant: EMP-0001 (FJ Kids) — Usuario: ${rolActivo === 'ADMIN' ? 'Adrián Peña' : 'Bodega Despacho'}</div>
+            <div class="subtitle">Tenant: EMP-0001 (FJ Kids) — Usuario: ${rolActivo === 'ADMIN' ? 'Adrián Peña (Admin)' : 'Luz Deisy (Bodega)'}</div>
           </div>
           <div style="text-align: right;">
             <div style="font-size: 16px; font-weight: bold; color: #d97706;">${ultimoCodigo}</div>
@@ -266,7 +263,7 @@ export default function Home() {
 
         <div class="total-box">
           TOTAL PRENDAS: ${totalPrendas} unds<br/>
-          ${rolActivo === 'ADMIN' ? `TOTAL PEDIDO: $ ${subtotalCOP.toLocaleString('es-CO')} COP` : 'TOTAL PEDIDO: 🔒 CONFIDENCIAL BODEGA'}
+          ${rolActivo === 'ADMIN' ? `TOTAL PEDIDO: $ ${subtotalCOP.toLocaleString('es-CO')} COP` : 'TOTAL PEDIDO: 🔒 OCULTO BODEGA'}
         </div>
 
         <div class="footer">
@@ -298,7 +295,7 @@ export default function Home() {
           <div>
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '6px' }}>
               <span style={{ backgroundColor: '#10b981', color: '#022c22', fontWeight: '900', fontSize: '11px', padding: '4px 10px', borderRadius: '6px', textTransform: 'uppercase' }}>
-                🟢 PEQUIX ERP CORE · MÓDULO ROLES & PERMISOS
+                🟢 PEQUIX ERP CORE · PERMISOS REFINADOS
               </span>
             </div>
             <h1 style={{ fontSize: '1.4rem', fontWeight: '900', margin: '4px 0 0 0', color: '#ffffff' }}>Control de Accesos & Despacho Ciego</h1>
@@ -373,7 +370,7 @@ export default function Home() {
           )}
         </div>
 
-        {/* Tabla Matriz de Productos con Permisos Granulares */}
+        {/* Tabla Matriz de Productos con Permisos Granulares Refinados */}
         <div style={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', padding: '20px', borderRadius: '16px', overflowX: 'auto' }}>
           <table style={{ width: '100%', textAlign: 'left', fontSize: '12px', borderCollapse: 'collapse' }}>
             <thead>
@@ -403,11 +400,13 @@ export default function Home() {
                         style={{ width: '60px', backgroundColor: '#1e293b', border: '1px solid #334155', color: '#10b981', fontWeight: '900', textAlign: 'center', padding: '6px', borderRadius: '6px', outline: 'none' }}
                       />
                     </td>
-                    <td style={{ padding: '12px 8px', textAlign: 'right', fontWeight: 'bold' }}>
-                      {rolActivo === 'ADMIN' ? `$ ${u.toLocaleString('es-CO')}` : '🔒 Oculto (Bodega)'}
+                    {/* Valor Unitario visible para ambos roles */}
+                    <td style={{ padding: '12px 8px', textAlign: 'right', fontWeight: 'bold', color: '#ffffff' }}>
+                      $ {u.toLocaleString('es-CO')}
                     </td>
+                    {/* Subtotal por referencia oculto para Bodega */}
                     <td style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '900', color: rolActivo === 'ADMIN' ? '#10b981' : '#94a3b8' }}>
-                      {rolActivo === 'ADMIN' ? `$ ${(cant * u).toLocaleString('es-CO')}` : '🔒 Oculto (Bodega)'}
+                      {rolActivo === 'ADMIN' ? `$ ${(cant * u).toLocaleString('es-CO')}` : '🔒 Oculto'}
                     </td>
                   </tr>
                 );
@@ -421,7 +420,7 @@ export default function Home() {
           <div>
             <span style={{ fontSize: '10px', color: '#94a3b8', textTransform: 'uppercase', display: 'block', fontWeight: 'bold' }}>Total Calculado del Pedido:</span>
             <div style={{ fontSize: '1.8rem', fontWeight: '900', color: rolActivo === 'ADMIN' ? '#10b981' : '#f59e0b' }}>
-              {rolActivo === 'ADMIN' ? `$ ${subtotalCOP.toLocaleString('es-CO')} COP` : '🔒 VISTA CIEGA DE BODEGA'}
+              {rolActivo === 'ADMIN' ? `$ ${subtotalCOP.toLocaleString('es-CO')} COP` : '🔒 TOTAL CONFIDENCIAL BODEGA'}
             </div>
             {rolActivo === 'ADMIN' ? (
               <span style={{ fontSize: '12px', color: '#fbbf24', fontWeight: 'bold', display: 'block', marginTop: '4px' }}>
