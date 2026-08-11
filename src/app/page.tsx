@@ -57,8 +57,9 @@ export default function Home() {
   const [carrito, setCarrito] = useState<{ [key: string]: number }>({});
   const [mensaje, setMensaje] = useState('');
 
-  // Llave Pública Productiva Real de Wompi Colombia
+  // Credenciales Oficiales de Wompi Producción Real (FJ Kids / Automerco)
   const wompiPublicKey = 'pub_prod_nNuIXKqeLhROFF29YF7UIVBMItu6ryaN';
+  const wompiIntegritySecret = 'prod_integrity_QxT16dnySpZOAlp7ME2kgPzA7Yz1GX9I';
 
   const [productos, setProductos] = useState<Producto[]>([
     { referencia: '745', descripcion: 'CONJUNTO BEBE DORMILON', curva: 'BEBÉS', precio_L1_base: 59900, mostrar_en_website: true },
@@ -97,7 +98,16 @@ export default function Home() {
     setMensaje(`🎉 Tarifa L1 Mayorista activada para NIT: ${nitMayorista}`);
   };
 
-  // Redirección Directa a Checkout Oficial Wompi Colombia (Sin Incompatibilidades de Widget)
+  // Generador de Hash SHA-256 Exigido por Wompi Producción
+  async function generarFirmaSHA256(cadena: string) {
+    const enco = new TextEncoder();
+    const data = enco.encode(cadena);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  // Checkout Directo con Firma de Integridad Calculada
   const pagarConWompiDirecto = async () => {
     if (totalPagarCOP === 0) {
       setMensaje('⚠️ El carrito está vacío.');
@@ -106,6 +116,7 @@ export default function Home() {
 
     const referenciaWompi = `PED-${Date.now()}`;
     const valorEnCentavos = totalPagarCOP * 100;
+    const moneda = 'COP';
 
     // Registrar Pedido Inicial en Estado Pendiente en PostgreSQL
     await supabase.from('pedidos').insert([{
@@ -118,10 +129,14 @@ export default function Home() {
       estado: 'PENDIENTE_PAGO_WOMPI'
     }]);
 
-    // Construcción de la URL de Pasarela Oficial Directa
-    const urlCheckoutWompi = `https://checkout.wompi.co/p/?public-key=${wompiPublicKey}&currency=COP&amount-in-cents=${valorEnCentavos}&reference=${referenciaWompi}&redirect-url=https://pequix-erp-core.vercel.app`;
+    // Estructura Hash SHA-256: Referencia + MontoCentavos + Moneda + SecretoIntegridad
+    const cadenaFirma = `${referenciaWompi}${valorEnCentavos}${moneda}${wompiIntegritySecret}`;
+    const firmaSHA256 = await generarFirmaSHA256(cadenaFirma);
 
-    // Abrir la pasarela directa en una ventana segura
+    // URL Oficial de Web Checkout Wompi con Firma
+    const redirectUrl = encodeURIComponent('https://pequix-erp-core.vercel.app');
+    const urlCheckoutWompi = `https://checkout.wompi.co/p/?public-key=${wompiPublicKey}&currency=${moneda}&amount-in-cents=${valorEnCentavos}&reference=${referenciaWompi}&signature-integrity=${firmaSHA256}&redirect-url=${redirectUrl}`;
+
     window.location.href = urlCheckoutWompi;
   };
 
@@ -137,7 +152,7 @@ export default function Home() {
             </span>
             <h1 style={{ fontSize: '1.4rem', fontWeight: '900', margin: '8px 0 0 0', color: '#ffffff' }}>Colección Infantil Confección Colombiana</h1>
             <p style={{ margin: '4px 0 0 0', color: '#94a3b8', fontSize: '12px' }}>
-              Pasarela en <strong style={{ color: '#10b981' }}>Producción Oficial Wompi Colombia ($ COP)</strong>
+              Pasarela Oficial Integrada con <strong style={{ color: '#10b981' }}>Wompi Colombia ($ COP)</strong>
             </p>
           </div>
 
