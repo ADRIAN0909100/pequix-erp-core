@@ -56,10 +56,10 @@ export default function Home() {
   const [nitMayorista, setNitMayorista] = useState('');
   const [carrito, setCarrito] = useState<{ [key: string]: number }>({});
   const [mensaje, setMensaje] = useState('');
+  const [procesando, setProcesando] = useState(false);
 
-  // CREDECIALES REALES DE PRODUCCIÓN WOMPI (DIRECTAS)
+  // Credenciales Oficiales Wompi Producción
   const wompiPublicKey = 'pub_prod_nNuIXKqeLhROFF29YF7UIVBMItu6ryaN';
-  const wompiIntegritySecret = 'prod_integrity_QxT16dnySpZOAlp7ME2kgPzA7Yz1GX9I';
 
   const [productos, setProductos] = useState<Producto[]>([
     { referencia: '745', descripcion: 'CONJUNTO BEBE DORMILON', curva: 'BEBÉS', precio_L1_base: 59900, mostrar_en_website: true },
@@ -74,6 +74,12 @@ export default function Home() {
       if (data && data.length > 0) setProductos(data);
     }
     cargar();
+
+    // Script Oficial de Wompi Widget
+    const script = document.createElement('script');
+    script.src = 'https://checkout.wompi.co/widget.js';
+    script.async = true;
+    document.body.appendChild(script);
   }, []);
 
   const getPrecioTienda = (p: Producto) => {
@@ -98,46 +104,56 @@ export default function Home() {
     setMensaje(`🎉 Tarifa L1 Mayorista activada para NIT: ${nitMayorista}`);
   };
 
-  // Generador Hash SHA-256 Nativo
-  async function generarFirmaSHA256(cadena: string) {
-    const enco = new TextEncoder();
-    const data = enco.encode(cadena);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-  }
-
-  // Redirección Directa con Firma Wompi Producción
-  const pagarConWompiDirecto = async () => {
+  // Apertura de Checkout con Widget Estándar de Wompi
+  const pagarConWompi = async () => {
     if (totalPagarCOP === 0) {
       setMensaje('⚠️ El carrito está vacío.');
       return;
     }
 
-    const referenciaWompi = `PED-${Date.now()}`;
-    const valorEnCentavos = totalPagarCOP * 100;
-    const moneda = 'COP';
+    try {
+      setProcesando(true);
+      const referenciaWompi = `PED-${Date.now()}`;
+      const valorEnCentavos = totalPagarCOP * 100;
 
-    // Registrar Pedido Inicial en Estado Pendiente en PostgreSQL
-    await supabase.from('pedidos').insert([{
-      tenant_id: 'EMP-0001',
-      codigo_pedido: referenciaWompi,
-      vendedor_nombre: esMayorista ? `Mayorista (${nitMayorista})` : 'Cliente Web B2C',
-      lista_aplicada: esMayorista ? 'L1_MAYORISTA' : 'L3_DETAL',
-      total_prendas: totalUnidadesCarrito,
-      subtotal_cop: totalPagarCOP,
-      estado: 'PENDIENTE_PAGO_WOMPI'
-    }]);
+      // Registrar Pedido Inicial en Estado Pendiente en Supabase
+      await supabase.from('pedidos').insert([{
+        tenant_id: 'EMP-0001',
+        codigo_pedido: referenciaWompi,
+        vendedor_nombre: esMayorista ? `Mayorista (${nitMayorista})` : 'Cliente Web B2C',
+        lista_aplicada: esMayorista ? 'L1_MAYORISTA' : 'L3_DETAL',
+        total_prendas: totalUnidadesCarrito,
+        subtotal_cop: totalPagarCOP,
+        estado: 'PENDIENTE_PAGO_WOMPI'
+      }]);
 
-    // Cadena de Integridad Exigida por Wompi: Referencia + MontoCentavos + Moneda + Secreto
-    const cadenaFirma = `${referenciaWompi}${valorEnCentavos}${moneda}${wompiIntegritySecret}`;
-    const firmaSHA256 = await generarFirmaSHA256(cadenaFirma);
+      // @ts-ignore
+      if (typeof WidgetCheckout !== 'undefined') {
+        // @ts-ignore
+        const checkout = new WidgetCheckout({
+          currency: 'COP',
+          amountInCents: valorEnCentavos,
+          reference: referenciaWompi,
+          publicKey: wompiPublicKey,
+          redirectUrl: 'https://pequix-erp-core.vercel.app'
+        });
 
-    // URL Oficial de Web Checkout Wompi con Firma
-    const redirectUrl = encodeURIComponent('https://pequix-erp-core.vercel.app');
-    const urlCheckoutWompi = `https://checkout.wompi.co/p/?public-key=${wompiPublicKey}&currency=${moneda}&amount-in-cents=${valorEnCentavos}&reference=${referenciaWompi}&signature-integrity=${firmaSHA256}&redirect-url=${redirectUrl}`;
-
-    window.location.href = urlCheckoutWompi;
+        checkout.open((result: any) => {
+          const transaction = result.transaction;
+          if (transaction && transaction.status === 'APPROVED') {
+            setMensaje(`✅ ¡Pago APROBADO por $ ${totalPagarCOP.toLocaleString('es-CO')} COP! Orden: ${referenciaWompi}`);
+            setCarrito({});
+          }
+        });
+      } else {
+        // Fallback Seguro a Web Checkout si el script tarda en cargar
+        window.location.href = `https://checkout.wompi.co/p/?public-key=${wompiPublicKey}&currency=COP&amount-in-cents=${valorEnCentavos}&reference=${referenciaWompi}`;
+      }
+    } catch (err) {
+      setMensaje('❌ Ocurrió un inconveniente al iniciar la pasarela.');
+    } finally {
+      setProcesando(false);
+    }
   };
 
   return (
@@ -152,7 +168,7 @@ export default function Home() {
             </span>
             <h1 style={{ fontSize: '1.4rem', fontWeight: '900', margin: '8px 0 0 0', color: '#ffffff' }}>Colección Infantil Confección Colombiana</h1>
             <p style={{ margin: '4px 0 0 0', color: '#94a3b8', fontSize: '12px' }}>
-              Pasarela en <strong style={{ color: '#10b981' }}>Producción Oficial Wompi Colombia ($ COP)</strong>
+              Pasarela Oficial Integrada con <strong style={{ color: '#10b981' }}>Wompi Colombia ($ COP)</strong>
             </p>
           </div>
 
@@ -236,8 +252,8 @@ export default function Home() {
           </div>
 
           <button
-            onClick={pagarConWompiDirecto}
-            disabled={totalUnidadesCarrito === 0}
+            onClick={pagarConWompi}
+            disabled={totalUnidadesCarrito === 0 || procesando}
             style={{
               padding: '14px 28px',
               borderRadius: '10px',
@@ -249,7 +265,7 @@ export default function Home() {
               fontSize: '13px'
             }}
           >
-            💳 Pagar con Wompi (Producción $ COP)
+            {procesando ? '⏳ Iniciando Pasarela...' : '💳 Pagar con Wompi ($ COP)'}
           </button>
         </div>
 
