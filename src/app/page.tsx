@@ -42,15 +42,6 @@ const supabase = {
   })
 };
 
-interface Tenant {
-  id: string;
-  nombre_empresa: string;
-  nit: string;
-  plan: 'BÁSICO' | 'PRO' | 'ENTERPRISE';
-  estado_pago: 'ACTIVO' | 'PENDIENTE' | 'MORA';
-  valor_mensual_cop: number;
-}
-
 interface Producto {
   referencia: string;
   descripcion: string;
@@ -60,21 +51,12 @@ interface Producto {
 }
 
 export default function Home() {
-  const [pestana, setPestana] = useState<'PORTAL_CENTRAL' | 'INVENTARIO' | 'PEDIDOS'>('PORTAL_CENTRAL');
+  const [pestana, setPestana] = useState<'TIENDA_WEB' | 'PORTAL_CENTRAL' | 'INVENTARIO' | 'PEDIDOS'>('TIENDA_WEB');
+  const [esMayorista, setEsMayorista] = useState(false);
+  const [nitMayorista, setNitMayorista] = useState('');
+  const [carrito, setCarrito] = useState<{ [key: string]: number }>({});
   const [mensaje, setMensaje] = useState('');
 
-  // Empresas Registradas en Pequix SaaS
-  const [tenants, setTenants] = useState<Tenant[]>([
-    { id: 'EMP-0001', nombre_empresa: 'FJ Kids Confecciones', nit: '900123456-1', plan: 'ENTERPRISE', estado_pago: 'ACTIVO', valor_mensual_cop: 250000 },
-    { id: 'EMP-0002', nombre_empresa: 'Aceros Febel E-commerce', nit: '901987654-2', plan: 'PRO', estado_pago: 'ACTIVO', valor_mensual_cop: 150000 }
-  ]);
-
-  // Formulario de Registro de Nueva Empresa
-  const [nuevoNombreEmpresa, setNuevoNombreEmpresa] = useState('');
-  const [nuevoNitEmpresa, setNuevoNitEmpresa] = useState('');
-  const [planSeleccionado, setPlanSeleccionado] = useState<'BÁSICO' | 'PRO' | 'ENTERPRISE'>('PRO');
-
-  // Inventario
   const [productos, setProductos] = useState<Producto[]>([
     { referencia: '745', descripcion: 'CONJUNTO BEBE DORMILON', curva: 'BEBÉS', precio_L1_base: 59900, mostrar_en_website: true },
     { referencia: '8182', descripcion: 'CONJUNTO BEBE PREMIUM', curva: 'BEBÉS', precio_L1_base: 70900, mostrar_en_website: true },
@@ -82,89 +64,96 @@ export default function Home() {
     { referencia: '1989', descripcion: 'OVEROL BEBE', curva: 'MESES', precio_L1_base: 65000, mostrar_en_website: true }
   ]);
 
-  const getValorPlan = (p: 'BÁSICO' | 'PRO' | 'ENTERPRISE') => {
-    if (p === 'BÁSICO') return 89000;
-    if (p === 'PRO') return 150000;
-    return 250000;
+  useEffect(() => {
+    async function cargar() {
+      const { data } = await supabase.from('productos').select('*');
+      if (data && data.length > 0) setProductos(data);
+    }
+    cargar();
+  }, []);
+
+  // Calcular Precio Según Canal (B2C = L3 / B2B = L1 Mayorista)
+  const getPrecioTienda = (p: Producto) => {
+    if (esMayorista) return p.precio_L1_base; // L1 Mayorista Base
+    return Math.round((p.precio_L1_base * 1.7) / 100) * 100 - 100; // L3 Detal (~70%)
   };
 
-  // Registrar Nueva Empresa Clienta en Pequix ERP
-  const registrarEmpresa = async () => {
-    if (!nuevoNombreEmpresa || !nuevoNitEmpresa) {
-      setMensaje('⚠️ Completa el Nombre de la Empresa y el NIT.');
+  const agregarAlCarrito = (ref: string) => {
+    setCarrito(prev => ({ ...prev, [ref]: (prev[ref] || 0) + 1 }));
+    setMensaje(`🛒 ¡Referencia ${ref} agregada al carrito de compras!`);
+  };
+
+  const totalUnidadesCarrito = Object.values(carrito).reduce((a, b) => a + b, 0);
+  const totalPagarCOP = productos.reduce((acc, p) => acc + ((carrito[p.referencia] || 0) * getPrecioTienda(p)), 0);
+
+  // Autenticación de Mayorista B2B
+  const loginMayorista = () => {
+    if (!nitMayorista) {
+      setMensaje('⚠️ Ingresa un NIT válido de mayorista.');
+      return;
+    }
+    setEsMayorista(true);
+    setMensaje(`🎉 ¡Bienvenido Cliente Mayorista (NIT: ${nitMayorista})! Tarifas L1 Mayorista activadas.`);
+  };
+
+  // Finalizar Compra por Wompi
+  const pagarConWompi = async () => {
+    if (totalUnidadesCarrito === 0) {
+      setMensaje('⚠️ El carrito de compras está vacío.');
       return;
     }
 
-    const nuevoId = `EMP-000${tenants.length + 1}`;
-    const valorCOP = getValorPlan(planSeleccionado);
+    const codigoOrder = `WEB-${Math.floor(1000 + Math.random() * 9000)}`;
 
-    const tenantNuevo: Tenant = {
-      id: nuevoId,
-      nombre_empresa: nuevoNombreEmpresa,
-      nit: nuevoNitEmpresa,
-      plan: planSeleccionado,
-      estado_pago: 'ACTIVO',
-      valor_mensual_cop: valorCOP
-    };
-
-    setTenants(prev => [...prev, tenantNuevo]);
-
-    // Persistencia en Supabase
-    await supabase.from('tenants').insert([{
-      id: nuevoId,
-      nombre_empresa: nuevoNombreEmpresa,
-      nit: nuevoNitEmpresa,
-      plan: planSeleccionado,
-      estado_pago: 'ACTIVO',
-      valor_mensual_cop: valorCOP
+    await supabase.from('pedidos').insert([{
+      tenant_id: 'EMP-0001',
+      codigo_pedido: codigoOrder,
+      vendedor_nombre: esMayorista ? `Mayorista (${nitMayorista})` : 'Cliente Web B2C',
+      lista_aplicada: esMayorista ? 'L1_MAYORISTA' : 'L3_DETAL',
+      total_prendas: totalUnidadesCarrito,
+      subtotal_cop: totalPagarCOP,
+      estado: 'PAGADO_WOMPI'
     }]);
 
-    // Registro Inmutable en Audit Log
     await supabase.from('audit_logs').insert([{
-      tenant_id: 'PEQUIX-SUPERADMIN',
-      usuario_id: 'USR-0001',
-      usuario_nombre: 'Adrián Peña',
-      accion: 'REGISTRAR_NUEVO_TENANT_SAAS',
-      entidad_afectada: 'TENANTS',
-      entidad_id: nuevoId,
-      valor_nuevo: tenantNuevo
+      tenant_id: 'EMP-0001',
+      usuario_id: esMayorista ? nitMayorista : 'CLIENTE_GUEST',
+      usuario_nombre: esMayorista ? `Mayorista ${nitMayorista}` : 'Cliente Web B2C',
+      accion: 'COMPRA_WEB_ECOMMERCE',
+      entidad_afectada: 'PEDIDOS',
+      entidad_id: codigoOrder,
+      valor_nuevo: { total_cop: totalPagarCOP, prendas: totalUnidadesCarrito, canal: esMayorista ? 'B2B' : 'B2C' }
     }]);
 
-    setMensaje(`🎉 ¡Empresa ${nuevoNombreEmpresa} (${nuevoId}) registrada exitosamente en Pequix ERP!`);
-    setNuevoNombreEmpresa('');
-    setNuevoNitEmpresa('');
-  };
-
-  // Simulación de Cobro por Wompi / Mercado Pago
-  const procesarCobroWompi = (t: Tenant) => {
-    setMensaje(`💳 Pasarela Wompi iniciada para ${t.nombre_empresa}: Cobro mensual por $ ${t.valor_mensual_cop.toLocaleString('es-CO')} COP en proceso...`);
+    setMensaje(`💳 ¡Pago Exitoso por $ ${totalPagarCOP.toLocaleString('es-CO')} COP mediante Wompi! Orden ${codigoOrder} registrada.`);
+    setCarrito({});
   };
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#090d16', color: '#f8fafc', padding: '20px', fontFamily: 'sans-serif' }}>
       <div style={{ maxWidth: '850px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '20px' }}>
         
-        {/* Header Tenant FJ Kids */}
+        {/* Header E-Commerce Pequix */}
         <div style={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', padding: '20px', borderRadius: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
           <div>
-            <span style={{ backgroundColor: '#fbbf24', color: '#451a03', fontWeight: '900', fontSize: '11px', padding: '4px 10px', borderRadius: '6px', textTransform: 'uppercase' }}>
-              👑 PORTAL CENTRAL PEQUIX · SUPER-ADMIN SAAS
+            <span style={{ backgroundColor: esMayorista ? '#10b981' : '#38bdf8', color: '#022c22', fontWeight: '900', fontSize: '11px', padding: '4px 10px', borderRadius: '6px', textTransform: 'uppercase' }}>
+              {esMayorista ? '🌐 PORTAL B2B MAYORISTA AUTORIZADO' : '🛍️ TIENDA VIRTUAL B2C (FJ KIDS)'}
             </span>
-            <h1 style={{ fontSize: '1.4rem', fontWeight: '900', margin: '8px 0 0 0', color: '#ffffff' }}>Gestión de Tenants & Pasarelas de Pago</h1>
+            <h1 style={{ fontSize: '1.4rem', fontWeight: '900', margin: '8px 0 0 0', color: '#ffffff' }}>Colección Infantil Confección Colombiana</h1>
             <p style={{ margin: '4px 0 0 0', color: '#94a3b8', fontSize: '12px' }}>
-              Super-Admin: <strong style={{ color: '#fbbf24' }}>Adrián Peña (USR-0001)</strong> — Propiedad de Pequix Digital
+              Precios en <strong style={{ color: '#fbbf24' }}>Pesos Colombianos ($ COP)</strong> — Envíos a todo el país 🇨🇴
             </p>
           </div>
 
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            <button onClick={() => setPestana('TIENDA_WEB')} style={{ padding: '10px 14px', borderRadius: '10px', border: 'none', fontWeight: 'bold', fontSize: '12px', cursor: 'pointer', backgroundColor: pestana === 'TIENDA_WEB' ? '#10b981' : '#1e293b', color: pestana === 'TIENDA_WEB' ? '#022c22' : '#ffffff' }}>
+              🛍️ Tienda Web
+            </button>
             <button onClick={() => setPestana('PORTAL_CENTRAL')} style={{ padding: '10px 14px', borderRadius: '10px', border: 'none', fontWeight: 'bold', fontSize: '12px', cursor: 'pointer', backgroundColor: pestana === 'PORTAL_CENTRAL' ? '#fbbf24' : '#1e293b', color: pestana === 'PORTAL_CENTRAL' ? '#022c22' : '#ffffff' }}>
               🏢 Portal Pequix
             </button>
-            <button onClick={() => setPestana('INVENTARIO')} style={{ padding: '10px 14px', borderRadius: '10px', border: 'none', fontWeight: 'bold', fontSize: '12px', cursor: 'pointer', backgroundColor: pestana === 'INVENTARIO' ? '#10b981' : '#1e293b', color: pestana === 'INVENTARIO' ? '#022c22' : '#ffffff' }}>
+            <button onClick={() => setPestana('INVENTARIO')} style={{ padding: '10px 14px', borderRadius: '10px', border: 'none', fontWeight: 'bold', fontSize: '12px', cursor: 'pointer', backgroundColor: pestana === 'INVENTARIO' ? '#38bdf8' : '#1e293b', color: pestana === 'INVENTARIO' ? '#022c22' : '#ffffff' }}>
               👕 Inventario
-            </button>
-            <button onClick={() => setPestana('PEDIDOS')} style={{ padding: '10px 14px', borderRadius: '10px', border: 'none', fontWeight: 'bold', fontSize: '12px', cursor: 'pointer', backgroundColor: pestana === 'PEDIDOS' ? '#38bdf8' : '#1e293b', color: pestana === 'PEDIDOS' ? '#022c22' : '#ffffff' }}>
-              🛒 Pedidos B2B
             </button>
           </div>
         </div>
@@ -175,103 +164,93 @@ export default function Home() {
           </div>
         )}
 
-        {/* PESTAÑA: PORTAL CENTRAL PEQUIX (SUPER-ADMIN SAAS) */}
-        {pestana === 'PORTAL_CENTRAL' && (
+        {pestana === 'TIENDA_WEB' && (
           <>
-            {/* Formulario de Alta de Nueva Empresa Clienta */}
-            <div style={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', padding: '20px', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
-              <h2 style={{ fontSize: '1.1rem', fontWeight: '900', color: '#fbbf24', margin: 0 }}>
-                ➕ Registrar Nueva Empresa Clienta (Tenant SaaS)
-              </h2>
-
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '11px', color: '#cbd5e1', marginBottom: '4px', fontWeight: 'bold' }}>Nombre Comercial de la Empresa:</label>
+            {/* Barra de Acceso Mayorista B2B */}
+            <div style={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', padding: '15px 20px', borderRadius: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+              {!esMayorista ? (
+                <div style={{ display: 'flex', gap: '10px', width: '100%', alignItems: 'center' }}>
+                  <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#cbd5e1' }}>🔑 ¿Eres Mayorista?</span>
                   <input
                     type="text"
-                    placeholder="Ej: Calzado Infantil Peques S.A.S"
-                    value={nuevoNombreEmpresa}
-                    onChange={(e) => setNuevoNombreEmpresa(e.target.value)}
-                    style={{ width: '100%', backgroundColor: '#1e293b', border: '1px solid #334155', color: '#ffffff', padding: '10px', borderRadius: '8px', fontWeight: 'bold', outline: 'none' }}
+                    placeholder="Ingresa tu NIT..."
+                    value={nitMayorista}
+                    onChange={(e) => setNitMayorista(e.target.value)}
+                    style={{ backgroundColor: '#1e293b', border: '1px solid #334155', color: '#fbbf24', padding: '8px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', outline: 'none' }}
                   />
+                  <button onClick={loginMayorista} style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', backgroundColor: '#10b981', color: '#022c22', fontWeight: '900', fontSize: '12px', cursor: 'pointer' }}>
+                    Acceder a Tarifa L1
+                  </button>
                 </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '11px', color: '#cbd5e1', marginBottom: '4px', fontWeight: 'bold' }}>NIT Legal:</label>
-                  <input
-                    type="text"
-                    placeholder="Ej: 901555444-8"
-                    value={nuevoNitEmpresa}
-                    onChange={(e) => setNuevoNitEmpresa(e.target.value)}
-                    style={{ width: '100%', backgroundColor: '#1e293b', border: '1px solid #334155', color: '#fbbf24', padding: '10px', borderRadius: '8px', fontWeight: 'bold', outline: 'none' }}
-                  />
+              ) : (
+                <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+                  <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#10b981' }}>✅ Tarifa Mayorista Activa (L1 Base) para NIT: {nitMayorista}</span>
+                  <button onClick={() => setEsMayorista(false)} style={{ padding: '6px 12px', borderRadius: '6px', border: 'none', backgroundColor: '#334155', color: '#ffffff', fontSize: '11px', cursor: 'pointer' }}>
+                    Cerrar Sesión B2B
+                  </button>
                 </div>
+              )}
+            </div>
 
-                <div>
-                  <label style={{ display: 'block', fontSize: '11px', color: '#cbd5e1', marginBottom: '4px', fontWeight: 'bold' }}>Plan SaaS Pequix ($ COP):</label>
-                  <select
-                    value={planSeleccionado}
-                    onChange={(e) => setPlanSeleccionado(e.target.value as any)}
-                    style={{ width: '100%', backgroundColor: '#1e293b', border: '1px solid #334155', color: '#10b981', padding: '10px', borderRadius: '8px', fontWeight: 'bold', outline: 'none' }}
-                  >
-                    <option value="BÁSICO">BÁSICO ($89.000 / mes)</option>
-                    <option value="PRO">PRO ($150.000 / mes)</option>
-                    <option value="ENTERPRISE">ENTERPRISE ($250.000 / mes)</option>
-                  </select>
+            {/* Catálogo de Productos Visibles */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '15px' }}>
+              {productos.filter(p => p.mostrar_en_website).map((p) => {
+                const precio = getPrecioTienda(p);
+                return (
+                  <div key={p.referencia} style={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '16px', padding: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '12px' }}>
+                    <div>
+                      <span style={{ fontSize: '10px', backgroundColor: '#1e293b', color: '#fbbf24', padding: '3px 8px', borderRadius: '6px', fontWeight: 'bold' }}>
+                        REF: {p.referencia} · {p.curva}
+                      </span>
+                      <h3 style={{ fontSize: '1.1rem', fontWeight: '900', margin: '10px 0 4px 0', color: '#ffffff' }}>
+                        {p.descripcion}
+                      </h3>
+                      <p style={{ fontSize: '12px', color: '#94a3b8', margin: 0 }}>
+                        Confección de Alta Calidad · FJ Kids
+                      </p>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px' }}>
+                      <span style={{ fontSize: '1.3rem', fontWeight: '900', color: '#10b981' }}>
+                        $ {precio.toLocaleString('es-CO')}
+                      </span>
+                      <button
+                        onClick={() => agregarAlCarrito(p.referencia)}
+                        style={{ padding: '10px 14px', borderRadius: '8px', border: 'none', backgroundColor: '#38bdf8', color: '#0f172a', fontWeight: '900', fontSize: '12px', cursor: 'pointer' }}
+                      >
+                        ➕ Agregar
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Resumen de Carrito & Checkout Wompi */}
+            <div style={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', padding: '20px', borderRadius: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px' }}>
+              <div>
+                <span style={{ fontSize: '10px', color: '#94a3b8', textTransform: 'uppercase', display: 'block', fontWeight: 'bold' }}>Resumen de Tu Compra:</span>
+                <div style={{ fontSize: '1.6rem', fontWeight: '900', color: '#10b981' }}>
+                  $ {totalPagarCOP.toLocaleString('es-CO')} COP ({totalUnidadesCarrito} prendas)
                 </div>
               </div>
 
               <button
-                onClick={registrarEmpresa}
-                style={{ padding: '12px', backgroundColor: '#fbbf24', color: '#451a03', border: 'none', borderRadius: '10px', fontWeight: '900', cursor: 'pointer', fontSize: '13px' }}
+                onClick={pagarConWompi}
+                disabled={totalUnidadesCarrito === 0}
+                style={{
+                  padding: '14px 28px',
+                  borderRadius: '10px',
+                  border: 'none',
+                  fontWeight: '900',
+                  cursor: totalUnidadesCarrito > 0 ? 'pointer' : 'not-allowed',
+                  backgroundColor: totalUnidadesCarrito > 0 ? '#10b981' : '#334155',
+                  color: totalUnidadesCarrito > 0 ? '#022c22' : '#94a3b8',
+                  fontSize: '13px'
+                }}
               >
-                🚀 Registrar Tenant & Activar Cuenta
+                💳 Pagar Ahora con Wompi
               </button>
-            </div>
-
-            {/* Lista de Tenants y Cobros Wompi */}
-            <div style={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', padding: '20px', borderRadius: '16px', overflowX: 'auto' }}>
-              <h3 style={{ fontSize: '1rem', fontWeight: '900', color: '#10b981', margin: '0 0 15px 0' }}>
-                🏢 Empresas Registradas & Facturación Recurrente (Wompi)
-              </h3>
-
-              <table style={{ width: '100%', textAlign: 'left', fontSize: '12px', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr style={{ borderBottom: '1px solid #1e293b', color: '#94a3b8' }}>
-                    <th style={{ padding: '10px 8px' }}>TENANT ID</th>
-                    <th style={{ padding: '10px 8px' }}>EMPRESA</th>
-                    <th style={{ padding: '10px 8px' }}>NIT</th>
-                    <th style={{ padding: '10px 8px' }}>PLAN SAAS</th>
-                    <th style={{ padding: '10px 8px', textAlign: 'right' }}>VALOR MENSUAL</th>
-                    <th style={{ padding: '10px 8px', textAlign: 'center' }}>PASARELA WOMPI</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {tenants.map((t) => (
-                    <tr key={t.id} style={{ borderBottom: '1px solid #1e293b' }}>
-                      <td style={{ padding: '12px 8px', fontWeight: '900', color: '#fbbf24' }}>{t.id}</td>
-                      <td style={{ padding: '12px 8px', fontWeight: 'bold' }}>{t.nombre_empresa}</td>
-                      <td style={{ padding: '12px 8px', color: '#94a3b8' }}>{t.nit}</td>
-                      <td style={{ padding: '12px 8px' }}>
-                        <span style={{ backgroundColor: '#1e293b', color: '#38bdf8', padding: '4px 8px', borderRadius: '6px', fontWeight: 'bold', fontSize: '10px' }}>
-                          {t.plan}
-                        </span>
-                      </td>
-                      <td style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '900', color: '#10b981' }}>
-                        $ {t.valor_mensual_cop.toLocaleString('es-CO')} COP
-                      </td>
-                      <td style={{ padding: '12px 8px', textAlign: 'center' }}>
-                        <button
-                          onClick={() => procesarCobroWompi(t)}
-                          style={{ padding: '6px 12px', borderRadius: '8px', border: 'none', fontWeight: 'bold', fontSize: '11px', cursor: 'pointer', backgroundColor: '#0284c7', color: '#ffffff' }}
-                        >
-                          💳 Cobrar por Wompi
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
             </div>
           </>
         )}
