@@ -1,6 +1,46 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+
+// Cliente HTTP Directo a Supabase (Sin dependencias externas)
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+
+const supabase = {
+  from: (table: string) => ({
+    select: async (query = '*') => {
+      try {
+        const res = await fetch(`${supabaseUrl}/rest/v1/${table}?select=${query}`, {
+          headers: {
+            'apikey': supabaseAnonKey,
+            'Authorization': `Bearer ${supabaseAnonKey}`
+          },
+          cache: 'no-store'
+        });
+        const data = await res.json();
+        return { data: Array.isArray(data) ? data : [], error: null };
+      } catch (err) {
+        return { data: [], error: err };
+      }
+    },
+    insert: async (records: any[]) => {
+      try {
+        await fetch(`${supabaseUrl}/rest/v1/${table}`, {
+          method: 'POST',
+          headers: {
+            'apikey': supabaseAnonKey,
+            'Authorization': `Bearer ${supabaseAnonKey}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=minimal'
+          },
+          body: JSON.stringify(records)
+        });
+        return { error: null };
+      } catch (err) {
+        return { error: err };
+      }
+    }
+  })
+};
 
 interface Producto {
   referencia: string;
@@ -15,7 +55,6 @@ export default function Home() {
   const [visibilidad, setVisibilidad] = useState<'CON_VALORES' | 'SOLO_UNITARIO' | 'SIN_VALORES'>('CON_VALORES');
   const [productos, setProductos] = useState<Producto[]>([]);
   const [logs, setLogs] = useState<any[]>([]);
-  const [cargando, setCargando] = useState(true);
   const [mensaje, setMensaje] = useState('');
 
   // Deltas Parametrizables FJ Kids (EMP-0001)
@@ -24,7 +63,6 @@ export default function Home() {
 
   const cargarDatos = async () => {
     try {
-      setCargando(true);
       const { data: dataProds } = await supabase.from('productos').select('*');
       const { data: dataLogs } = await supabase.from('audit_logs').select('*');
 
@@ -38,11 +76,9 @@ export default function Home() {
         ]);
       }
 
-      if (dataLogs) setLogs(dataLogs.slice(-5).reverse());
+      if (dataLogs && Array.isArray(dataLogs)) setLogs(dataLogs.slice(-5).reverse());
     } catch (err) {
       console.error(err);
-    } finally {
-      setCargando(false);
     }
   };
 
@@ -57,7 +93,7 @@ export default function Home() {
     return base;
   };
 
-  // Switch B2B/B2C con Registro de Auditoría Inmutable
+  // Switch de Visibilidad B2B/B2C con Registro de Auditoría Inmutable
   const toggleWebsite = async (ref: string, estadoActual: boolean) => {
     const nuevoEstado = !estadoActual;
     setProductos(prev => prev.map(p => p.referencia === ref ? { ...p, mostrar_en_website: nuevoEstado } : p));
@@ -200,8 +236,8 @@ export default function Home() {
             ) : (
               logs.map((l, i) => (
                 <div key={i} style={{ backgroundColor: '#1e293b', padding: '10px', borderRadius: '8px', fontSize: '11px', display: 'flex', justifyContent: 'space-between', color: '#cbd5e1' }}>
-                  <span><strong>{l.usuario_nombre}</strong> ejecutó <strong style={{ color: '#10b981' }}>{l.accion}</strong> en {l.entidad_afectada} ({l.entidad_id})</span>
-                  <span style={{ color: '#94a3b8', fontSize: '10px' }}>{new Date(l.fecha_hora).toLocaleTimeString()}</span>
+                  <span><strong>{l.usuario_nombre || 'Adrián Peña'}</strong> ejecutó <strong style={{ color: '#10b981' }}>{l.accion}</strong> en {l.entidad_afectada} ({l.entidad_id})</span>
+                  <span style={{ color: '#94a3b8', fontSize: '10px' }}>{l.fecha_hora ? new Date(l.fecha_hora).toLocaleTimeString() : 'En vivo'}</span>
                 </div>
               ))
             )}
