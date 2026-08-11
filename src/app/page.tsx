@@ -57,6 +57,9 @@ export default function Home() {
   const [carrito, setCarrito] = useState<{ [key: string]: number }>({});
   const [mensaje, setMensaje] = useState('');
 
+  // Clave Pública de Wompi (Asignar la real en Vercel o ingresar aquí)
+  const wompiPublicKey = process.env.NEXT_PUBLIC_WOMPI_PUBLIC_KEY || 'pub_test_Q5y152W2BWhM234567890'; 
+
   const [productos, setProductos] = useState<Producto[]>([
     { referencia: '745', descripcion: 'CONJUNTO BEBE DORMILON', curva: 'BEBÉS', precio_L1_base: 59900, mostrar_en_website: true },
     { referencia: '8182', descripcion: 'CONJUNTO BEBE PREMIUM', curva: 'BEBÉS', precio_L1_base: 70900, mostrar_en_website: true },
@@ -70,63 +73,77 @@ export default function Home() {
       if (data && data.length > 0) setProductos(data);
     }
     cargar();
+
+    // Cargar Script Oficial de Wompi Widget
+    const script = document.createElement('script');
+    script.src = 'https://checkout.wompi.co/widget.js';
+    script.async = true;
+    document.body.appendChild(script);
   }, []);
 
-  // Calcular Precio Según Canal (B2C = L3 / B2B = L1 Mayorista)
   const getPrecioTienda = (p: Producto) => {
-    if (esMayorista) return p.precio_L1_base; // L1 Mayorista Base
-    return Math.round((p.precio_L1_base * 1.7) / 100) * 100 - 100; // L3 Detal (~70%)
+    if (esMayorista) return p.precio_L1_base;
+    return Math.round((p.precio_L1_base * 1.7) / 100) * 100 - 100;
   };
 
   const agregarAlCarrito = (ref: string) => {
     setCarrito(prev => ({ ...prev, [ref]: (prev[ref] || 0) + 1 }));
-    setMensaje(`🛒 ¡Referencia ${ref} agregada al carrito de compras!`);
+    setMensaje(`🛒 Referencia ${ref} agregada al carrito de compras.`);
   };
 
   const totalUnidadesCarrito = Object.values(carrito).reduce((a, b) => a + b, 0);
   const totalPagarCOP = productos.reduce((acc, p) => acc + ((carrito[p.referencia] || 0) * getPrecioTienda(p)), 0);
 
-  // Autenticación de Mayorista B2B
   const loginMayorista = () => {
     if (!nitMayorista) {
-      setMensaje('⚠️ Ingresa un NIT válido de mayorista.');
+      setMensaje('⚠️ Ingresa un NIT válido.');
       return;
     }
     setEsMayorista(true);
-    setMensaje(`🎉 ¡Bienvenido Cliente Mayorista (NIT: ${nitMayorista})! Tarifas L1 Mayorista activadas.`);
+    setMensaje(`🎉 Tarifa L1 Mayorista activada para NIT: ${nitMayorista}`);
   };
 
-  // Finalizar Compra por Wompi
-  const pagarConWompi = async () => {
-    if (totalUnidadesCarrito === 0) {
-      setMensaje('⚠️ El carrito de compras está vacío.');
+  // Disparar Pasarela Oficial de Wompi Widget Real
+  const abrirWompiReal = () => {
+    if (totalPagarCOP === 0) {
+      setMensaje('⚠️ El carrito está vacío.');
       return;
     }
 
-    const codigoOrder = `WEB-${Math.floor(1000 + Math.random() * 9000)}`;
+    const referenciaWompi = `PED-${Date.now()}`;
+    const valorEnCentavos = totalPagarCOP * 100; // Wompi procesa en centavos COP
 
-    await supabase.from('pedidos').insert([{
-      tenant_id: 'EMP-0001',
-      codigo_pedido: codigoOrder,
-      vendedor_nombre: esMayorista ? `Mayorista (${nitMayorista})` : 'Cliente Web B2C',
-      lista_aplicada: esMayorista ? 'L1_MAYORISTA' : 'L3_DETAL',
-      total_prendas: totalUnidadesCarrito,
-      subtotal_cop: totalPagarCOP,
-      estado: 'PAGADO_WOMPI'
-    }]);
+    // @ts-ignore
+    if (typeof WidgetCheckout !== 'undefined') {
+      // @ts-ignore
+      const checkout = new WidgetCheckout({
+        currency: 'COP',
+        amountInCents: valorEnCentavos,
+        reference: referenciaWompi,
+        publicKey: wompiPublicKey,
+        redirectUrl: 'https://pequix-erp-core.vercel.app'
+      });
 
-    await supabase.from('audit_logs').insert([{
-      tenant_id: 'EMP-0001',
-      usuario_id: esMayorista ? nitMayorista : 'CLIENTE_GUEST',
-      usuario_nombre: esMayorista ? `Mayorista ${nitMayorista}` : 'Cliente Web B2C',
-      accion: 'COMPRA_WEB_ECOMMERCE',
-      entidad_afectada: 'PEDIDOS',
-      entidad_id: codigoOrder,
-      valor_nuevo: { total_cop: totalPagarCOP, prendas: totalUnidadesCarrito, canal: esMayorista ? 'B2B' : 'B2C' }
-    }]);
+      checkout.open(async (result: any) => {
+        const transaction = result.transaction;
+        if (transaction.status === 'APPROVED') {
+          await supabase.from('pedidos').insert([{
+            tenant_id: 'EMP-0001',
+            codigo_pedido: referenciaWompi,
+            vendedor_nombre: esMayorista ? `Mayorista (${nitMayorista})` : 'Cliente Web B2C',
+            lista_aplicada: esMayorista ? 'L1_MAYORISTA' : 'L3_DETAL',
+            total_prendas: totalUnidadesCarrito,
+            subtotal_cop: totalPagarCOP,
+            estado: 'APROBADO_WOMPI_REAL'
+          }]);
 
-    setMensaje(`💳 ¡Pago Exitoso por $ ${totalPagarCOP.toLocaleString('es-CO')} COP mediante Wompi! Orden ${codigoOrder} registrada.`);
-    setCarrito({});
+          setMensaje(`✅ ¡Pago APROBADO con Wompi por $ ${totalPagarCOP.toLocaleString('es-CO')} COP! Orden: ${referenciaWompi}`);
+          setCarrito({});
+        }
+      });
+    } else {
+      setMensaje('⏳ Cargando pasarela Wompi... Intenta en 3 segundos.');
+    }
   };
 
   return (
@@ -141,19 +158,13 @@ export default function Home() {
             </span>
             <h1 style={{ fontSize: '1.4rem', fontWeight: '900', margin: '8px 0 0 0', color: '#ffffff' }}>Colección Infantil Confección Colombiana</h1>
             <p style={{ margin: '4px 0 0 0', color: '#94a3b8', fontSize: '12px' }}>
-              Precios en <strong style={{ color: '#fbbf24' }}>Pesos Colombianos ($ COP)</strong> — Envíos a todo el país 🇨🇴
+              Pagos 100% Seguros con <strong style={{ color: '#fbbf24' }}>Pasarela Wompi Colombia ($ COP)</strong>
             </p>
           </div>
 
-          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-            <button onClick={() => setPestana('TIENDA_WEB')} style={{ padding: '10px 14px', borderRadius: '10px', border: 'none', fontWeight: 'bold', fontSize: '12px', cursor: 'pointer', backgroundColor: pestana === 'TIENDA_WEB' ? '#10b981' : '#1e293b', color: pestana === 'TIENDA_WEB' ? '#022c22' : '#ffffff' }}>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button onClick={() => setPestana('TIENDA_WEB')} style={{ padding: '10px 14px', borderRadius: '10px', border: 'none', fontWeight: 'bold', fontSize: '12px', cursor: 'pointer', backgroundColor: '#10b981', color: '#022c22' }}>
               🛍️ Tienda Web
-            </button>
-            <button onClick={() => setPestana('PORTAL_CENTRAL')} style={{ padding: '10px 14px', borderRadius: '10px', border: 'none', fontWeight: 'bold', fontSize: '12px', cursor: 'pointer', backgroundColor: pestana === 'PORTAL_CENTRAL' ? '#fbbf24' : '#1e293b', color: pestana === 'PORTAL_CENTRAL' ? '#022c22' : '#ffffff' }}>
-              🏢 Portal Pequix
-            </button>
-            <button onClick={() => setPestana('INVENTARIO')} style={{ padding: '10px 14px', borderRadius: '10px', border: 'none', fontWeight: 'bold', fontSize: '12px', cursor: 'pointer', backgroundColor: pestana === 'INVENTARIO' ? '#38bdf8' : '#1e293b', color: pestana === 'INVENTARIO' ? '#022c22' : '#ffffff' }}>
-              👕 Inventario
             </button>
           </div>
         </div>
@@ -164,96 +175,89 @@ export default function Home() {
           </div>
         )}
 
-        {pestana === 'TIENDA_WEB' && (
-          <>
-            {/* Barra de Acceso Mayorista B2B */}
-            <div style={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', padding: '15px 20px', borderRadius: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
-              {!esMayorista ? (
-                <div style={{ display: 'flex', gap: '10px', width: '100%', alignItems: 'center' }}>
-                  <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#cbd5e1' }}>🔑 ¿Eres Mayorista?</span>
-                  <input
-                    type="text"
-                    placeholder="Ingresa tu NIT..."
-                    value={nitMayorista}
-                    onChange={(e) => setNitMayorista(e.target.value)}
-                    style={{ backgroundColor: '#1e293b', border: '1px solid #334155', color: '#fbbf24', padding: '8px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', outline: 'none' }}
-                  />
-                  <button onClick={loginMayorista} style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', backgroundColor: '#10b981', color: '#022c22', fontWeight: '900', fontSize: '12px', cursor: 'pointer' }}>
-                    Acceder a Tarifa L1
-                  </button>
-                </div>
-              ) : (
-                <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
-                  <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#10b981' }}>✅ Tarifa Mayorista Activa (L1 Base) para NIT: {nitMayorista}</span>
-                  <button onClick={() => setEsMayorista(false)} style={{ padding: '6px 12px', borderRadius: '6px', border: 'none', backgroundColor: '#334155', color: '#ffffff', fontSize: '11px', cursor: 'pointer' }}>
-                    Cerrar Sesión B2B
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Catálogo de Productos Visibles */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '15px' }}>
-              {productos.filter(p => p.mostrar_en_website).map((p) => {
-                const precio = getPrecioTienda(p);
-                return (
-                  <div key={p.referencia} style={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '16px', padding: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '12px' }}>
-                    <div>
-                      <span style={{ fontSize: '10px', backgroundColor: '#1e293b', color: '#fbbf24', padding: '3px 8px', borderRadius: '6px', fontWeight: 'bold' }}>
-                        REF: {p.referencia} · {p.curva}
-                      </span>
-                      <h3 style={{ fontSize: '1.1rem', fontWeight: '900', margin: '10px 0 4px 0', color: '#ffffff' }}>
-                        {p.descripcion}
-                      </h3>
-                      <p style={{ fontSize: '12px', color: '#94a3b8', margin: 0 }}>
-                        Confección de Alta Calidad · FJ Kids
-                      </p>
-                    </div>
-
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px' }}>
-                      <span style={{ fontSize: '1.3rem', fontWeight: '900', color: '#10b981' }}>
-                        $ {precio.toLocaleString('es-CO')}
-                      </span>
-                      <button
-                        onClick={() => agregarAlCarrito(p.referencia)}
-                        style={{ padding: '10px 14px', borderRadius: '8px', border: 'none', backgroundColor: '#38bdf8', color: '#0f172a', fontWeight: '900', fontSize: '12px', cursor: 'pointer' }}
-                      >
-                        ➕ Agregar
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Resumen de Carrito & Checkout Wompi */}
-            <div style={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', padding: '20px', borderRadius: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px' }}>
-              <div>
-                <span style={{ fontSize: '10px', color: '#94a3b8', textTransform: 'uppercase', display: 'block', fontWeight: 'bold' }}>Resumen de Tu Compra:</span>
-                <div style={{ fontSize: '1.6rem', fontWeight: '900', color: '#10b981' }}>
-                  $ {totalPagarCOP.toLocaleString('es-CO')} COP ({totalUnidadesCarrito} prendas)
-                </div>
-              </div>
-
-              <button
-                onClick={pagarConWompi}
-                disabled={totalUnidadesCarrito === 0}
-                style={{
-                  padding: '14px 28px',
-                  borderRadius: '10px',
-                  border: 'none',
-                  fontWeight: '900',
-                  cursor: totalUnidadesCarrito > 0 ? 'pointer' : 'not-allowed',
-                  backgroundColor: totalUnidadesCarrito > 0 ? '#10b981' : '#334155',
-                  color: totalUnidadesCarrito > 0 ? '#022c22' : '#94a3b8',
-                  fontSize: '13px'
-                }}
-              >
-                💳 Pagar Ahora con Wompi
+        {/* Login Mayorista */}
+        <div style={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', padding: '15px 20px', borderRadius: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          {!esMayorista ? (
+            <div style={{ display: 'flex', gap: '10px', width: '100%', alignItems: 'center' }}>
+              <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#cbd5e1' }}>🔑 ¿Eres Mayorista?</span>
+              <input
+                type="text"
+                placeholder="Ingresa tu NIT..."
+                value={nitMayorista}
+                onChange={(e) => setNitMayorista(e.target.value)}
+                style={{ backgroundColor: '#1e293b', border: '1px solid #334155', color: '#fbbf24', padding: '8px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', outline: 'none' }}
+              />
+              <button onClick={loginMayorista} style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', backgroundColor: '#10b981', color: '#022c22', fontWeight: '900', fontSize: '12px', cursor: 'pointer' }}>
+                Acceder a Tarifa L1
               </button>
             </div>
-          </>
-        )}
+          ) : (
+            <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+              <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#10b981' }}>✅ Tarifa Mayorista Activa (L1) para NIT: {nitMayorista}</span>
+              <button onClick={() => setEsMayorista(false)} style={{ padding: '6px 12px', borderRadius: '6px', border: 'none', backgroundColor: '#334155', color: '#ffffff', fontSize: '11px', cursor: 'pointer' }}>
+                Cerrar Sesión B2B
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Catálogo de Productos */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '15px' }}>
+          {productos.filter(p => p.mostrar_en_website).map((p) => {
+            const precio = getPrecioTienda(p);
+            return (
+              <div key={p.referencia} style={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '16px', padding: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '12px' }}>
+                <div>
+                  <span style={{ fontSize: '10px', backgroundColor: '#1e293b', color: '#fbbf24', padding: '3px 8px', borderRadius: '6px', fontWeight: 'bold' }}>
+                    REF: {p.referencia} · {p.curva}
+                  </span>
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: '900', margin: '10px 0 4px 0', color: '#ffffff' }}>
+                    {p.descripcion}
+                  </h3>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px' }}>
+                  <span style={{ fontSize: '1.3rem', fontWeight: '900', color: '#10b981' }}>
+                    $ {precio.toLocaleString('es-CO')}
+                  </span>
+                  <button
+                    onClick={() => agregarAlCarrito(p.referencia)}
+                    style={{ padding: '10px 14px', borderRadius: '8px', border: 'none', backgroundColor: '#38bdf8', color: '#0f172a', fontWeight: '900', fontSize: '12px', cursor: 'pointer' }}
+                  >
+                    ➕ Agregar
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Resumen Financiero & Wompi Real */}
+        <div style={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', padding: '20px', borderRadius: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px' }}>
+          <div>
+            <span style={{ fontSize: '10px', color: '#94a3b8', textTransform: 'uppercase', display: 'block', fontWeight: 'bold' }}>Total a Pagar por Pasarela Wompi:</span>
+            <div style={{ fontSize: '1.8rem', fontWeight: '900', color: '#10b981' }}>
+              $ {totalPagarCOP.toLocaleString('es-CO')} COP ({totalUnidadesCarrito} prendas)
+            </div>
+          </div>
+
+          <button
+            onClick={abrirWompiReal}
+            disabled={totalUnidadesCarrito === 0}
+            style={{
+              padding: '14px 28px',
+              borderRadius: '10px',
+              border: 'none',
+              fontWeight: '900',
+              cursor: totalUnidadesCarrito > 0 ? 'pointer' : 'not-allowed',
+              backgroundColor: totalUnidadesCarrito > 0 ? '#10b981' : '#334155',
+              color: totalUnidadesCarrito > 0 ? '#022c22' : '#94a3b8',
+              fontSize: '13px'
+            }}
+          >
+            💳 Pagar con Wompi (Nequi / PSE / Tarjeta)
+          </button>
+        </div>
 
       </div>
     </div>
