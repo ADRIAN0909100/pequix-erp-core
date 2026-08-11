@@ -9,7 +9,8 @@ export const supabase = {
           headers: {
             'apikey': supabaseAnonKey,
             'Authorization': `Bearer ${supabaseAnonKey}`
-          }
+          },
+          cache: 'no-store'
         });
         const data = await res.json();
         return { data: Array.isArray(data) ? data : [], error: null };
@@ -19,7 +20,7 @@ export const supabase = {
     },
     insert: async (records: any[]) => {
       try {
-        const res = await fetch(`${supabaseUrl}/rest/v1/${table}`, {
+        await fetch(`${supabaseUrl}/rest/v1/${table}`, {
           method: 'POST',
           headers: {
             'apikey': supabaseAnonKey,
@@ -31,7 +32,7 @@ export const supabase = {
         });
         return { error: null };
       } catch (err) {
-        return { data: null, error: err };
+        return { error: err };
       }
     }
   })
