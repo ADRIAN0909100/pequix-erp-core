@@ -164,12 +164,101 @@ export default function Home() {
     }
   };
 
-  // Generar Impresión PDF
-  const exportarPDF = () => {
-    window.print();
+  // Generador Real de Archivo PDF Descargable mediante Ventana HTML Imprimible / PDF
+  const descargarPDFReal = () => {
+    const ventana = window.open('', '_blank');
+    if (!ventana) return;
+
+    const filasHtml = productos.map(p => {
+      const u = getPrecio(p.precio_L1_base);
+      const cant = cantidades[p.referencia] || 0;
+      return `
+        <tr>
+          <td style="padding: 8px; border-bottom: 1px solid #ddd; font-weight: bold;">${p.referencia}</td>
+          <td style="padding: 8px; border-bottom: 1px solid #ddd;">${p.descripcion}</td>
+          <td style="padding: 8px; border-bottom: 1px solid #ddd;">${p.curva}</td>
+          <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: center;">${cant} unds</td>
+          <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right;">$ ${u.toLocaleString('es-CO')}</td>
+          <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right; font-weight: bold; color: #10b981;">$ ${(cant * u).toLocaleString('es-CO')}</td>
+        </tr>
+      `;
+    }).join('');
+
+    const htmlCompleto = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Comprobante_${ultimoCodigo}</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 30px; color: #1e293b; }
+          .header { display: flex; justify-content: space-between; border-bottom: 2px solid #10b981; padding-bottom: 15px; margin-bottom: 20px; }
+          .title { font-size: 20px; font-weight: bold; color: #0f172a; }
+          .subtitle { font-size: 12px; color: #64748b; }
+          .info-box { background-color: #f8fafc; border: 1px solid #e2e8f0; padding: 15px; border-radius: 8px; margin-bottom: 20px; font-size: 13px; }
+          table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 20px; }
+          th { background-color: #0f172a; color: #ffffff; text-align: left; padding: 10px 8px; }
+          .total-box { text-align: right; font-size: 18px; font-weight: bold; color: #10b981; margin-top: 20px; }
+          .footer { margin-top: 40px; text-align: center; font-size: 11px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 10px; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div>
+            <div class="title">PEQUIX ERP · COMPROBANTE DE PEDIDO FORMAL</div>
+            <div class="subtitle">Tenant: EMP-0001 (FJ Kids) — Asesor: Adrián Peña</div>
+          </div>
+          <div style="text-align: right;">
+            <div style="font-size: 16px; font-weight: bold; color: #d97706;">${ultimoCodigo}</div>
+            <div class="subtitle">${new Date().toLocaleDateString('es-CO')}</div>
+          </div>
+        </div>
+
+        <div class="info-box">
+          <strong>Cliente:</strong> ${actualCliente?.nombre_comercial}<br/>
+          <strong>Razón Social:</strong> ${actualCliente?.razon_social}<br/>
+          <strong>NIT:</strong> ${actualCliente?.nit}<br/>
+          <strong>Lista Aplicada:</strong> ${lista}
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>REF</th>
+              <th>DESCRIPCIÓN</th>
+              <th>CURVA</th>
+              <th style="text-align: center;">CANTIDAD</th>
+              <th style="text-align: right;">UNITARIO ($ COP)</th>
+              <th style="text-align: right;">SUBTOTAL ($ COP)</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${filasHtml}
+          </tbody>
+        </table>
+
+        <div class="total-box">
+          TOTAL PRENDAS: ${totalPrendas} unds<br/>
+          TOTAL PEDIDO: $ ${subtotalCOP.toLocaleString('es-CO')} COP
+        </div>
+
+        <div class="footer">
+          Generado automáticamente por Pequix ERP SaaS · Medellín, Colombia
+        </div>
+
+        <script>
+          window.onload = function() {
+            window.print();
+          };
+        </script>
+      </body>
+      </html>
+    `;
+
+    ventana.document.write(htmlCompleto);
+    ventana.document.close();
   };
 
-  // Enviar WhatsApp con Enlace Directo a Descarga de PDF
+  // Enviar WhatsApp con Enlace al PDF Renderizable
   const enviarWhatsAppConPDF = () => {
     const urlDocumento = `https://pequix-erp-core.vercel.app/?order=${ultimoCodigo}&export=pdf`;
     
@@ -195,9 +284,9 @@ export default function Home() {
         <div style={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', padding: '20px', borderRadius: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
           <div>
             <span style={{ backgroundColor: '#10b981', color: '#022c22', fontWeight: '900', fontSize: '11px', padding: '4px 10px', borderRadius: '6px', textTransform: 'uppercase' }}>
-              🟢 PEQUIX ERP CORE · EXPORTACIÓN PDF & WHATSAPP
+              🟢 PEQUIX ERP CORE · GENERADOR PDF
             </span>
-            <h1 style={{ fontSize: '1.4rem', fontWeight: '900', margin: '8px 0 0 0', color: '#ffffff' }}>Cierre de Pedidos B2B & Envío PDF</h1>
+            <h1 style={{ fontSize: '1.4rem', fontWeight: '900', margin: '8px 0 0 0', color: '#ffffff' }}>Cierre de Pedidos B2B & Descarga PDF</h1>
             <p style={{ margin: '4px 0 0 0', color: '#94a3b8', fontSize: '12px' }}>
               Asesor Comercial: <strong style={{ color: '#fbbf24' }}>Adrián Peña (USR-0001 / V2)</strong> — Tenant: EMP-0001 (FJ Kids)
             </p>
@@ -343,7 +432,7 @@ export default function Home() {
             </button>
 
             <button
-              onClick={exportarPDF}
+              onClick={descargarPDFReal}
               style={{
                 padding: '12px 18px',
                 borderRadius: '10px',
@@ -355,7 +444,7 @@ export default function Home() {
                 fontSize: '12px'
               }}
             >
-              📄 Guardar PDF
+              📄 Descargar PDF Real
             </button>
 
             <button
