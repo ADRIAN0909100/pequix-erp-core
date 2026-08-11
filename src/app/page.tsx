@@ -57,8 +57,8 @@ export default function Home() {
   const [carrito, setCarrito] = useState<{ [key: string]: number }>({});
   const [mensaje, setMensaje] = useState('');
 
-  // Llave Pública Productiva Real de Wompi Colombia (Dinero Real $ COP)
-  const wompiPublicKey = process.env.NEXT_PUBLIC_WOMPI_PUBLIC_KEY || 'pub_prod_nNuIXKqeLhROFF29YF7UIVBMItu6ryaN'; 
+  // Llave Pública Productiva Real de Wompi
+  const wompiPublicKey = 'pub_prod_nNuIXKqeLhROFF29YF7UIVBMItu6ryaN';
 
   const [productos, setProductos] = useState<Producto[]>([
     { referencia: '745', descripcion: 'CONJUNTO BEBE DORMILON', curva: 'BEBÉS', precio_L1_base: 59900, mostrar_en_website: true },
@@ -74,7 +74,7 @@ export default function Home() {
     }
     cargar();
 
-    // Inyectar Script Oficial de Wompi Widget
+    // Script Oficial de Wompi Widget
     const script = document.createElement('script');
     script.src = 'https://checkout.wompi.co/widget.js';
     script.async = true;
@@ -103,7 +103,7 @@ export default function Home() {
     setMensaje(`🎉 Tarifa L1 Mayorista activada para NIT: ${nitMayorista}`);
   };
 
-  // Abrir Modal Oficial de Wompi en Modo Producción
+  // Abrir Checkout de Producción Wompi
   const abrirWompiProduccion = () => {
     if (totalPagarCOP === 0) {
       setMensaje('⚠️ El carrito está vacío.');
