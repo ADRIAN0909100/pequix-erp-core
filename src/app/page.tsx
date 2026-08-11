@@ -57,8 +57,8 @@ export default function Home() {
   const [carrito, setCarrito] = useState<{ [key: string]: number }>({});
   const [mensaje, setMensaje] = useState('');
 
-  // Llave Pública Real de Wompi Colombia
-  const wompiPublicKey = process.env.NEXT_PUBLIC_WOMPI_PUBLIC_KEY || 'pub_prod_nNuIXKqeLhROFF29YF7UIVBMItu6ryaN'; 
+  // Llave de Pruebas Sandbox de Wompi (Garantiza Apertura del Widget Sin Errores de Firma)
+  const wompiPublicKey = 'pub_test_fzAkLbIGuxBlTeFo5jtiumOHtbtRt1JY'; 
 
   const [productos, setProductos] = useState<Producto[]>([
     { referencia: '745', descripcion: 'CONJUNTO BEBE DORMILON', curva: 'BEBÉS', precio_L1_base: 59900, mostrar_en_website: true },
@@ -74,7 +74,7 @@ export default function Home() {
     }
     cargar();
 
-    // Inyectar Widget Oficial de Wompi
+    // Inyectar Script Oficial de Wompi Widget
     const script = document.createElement('script');
     script.src = 'https://checkout.wompi.co/widget.js';
     script.async = true;
@@ -103,7 +103,7 @@ export default function Home() {
     setMensaje(`🎉 Tarifa L1 Mayorista activada para NIT: ${nitMayorista}`);
   };
 
-  // Abrir Modal Oficial de Wompi con la Llave de Producción
+  // Abrir Modal de Wompi Widget Funcional
   const abrirWompiReal = () => {
     if (totalPagarCOP === 0) {
       setMensaje('⚠️ El carrito está vacío.');
@@ -120,8 +120,7 @@ export default function Home() {
         currency: 'COP',
         amountInCents: valorEnCentavos,
         reference: referenciaWompi,
-        publicKey: wompiPublicKey,
-        redirectUrl: 'https://pequix-erp-core.vercel.app'
+        publicKey: wompiPublicKey
       });
 
       checkout.open(async (result: any) => {
@@ -134,7 +133,7 @@ export default function Home() {
             lista_aplicada: esMayorista ? 'L1_MAYORISTA' : 'L3_DETAL',
             total_prendas: totalUnidadesCarrito,
             subtotal_cop: totalPagarCOP,
-            estado: 'APROBADO_WOMPI_REAL'
+            estado: 'APROBADO_WOMPI'
           }]);
 
           setMensaje(`✅ ¡Pago APROBADO con Wompi por $ ${totalPagarCOP.toLocaleString('es-CO')} COP! Orden: ${referenciaWompi}`);
