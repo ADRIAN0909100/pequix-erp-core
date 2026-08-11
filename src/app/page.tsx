@@ -55,6 +55,7 @@ interface Cliente {
   razon_social: string;
   nombre_comercial: string;
   ciudad: string;
+  telefono?: string;
 }
 
 export default function Home() {
@@ -65,6 +66,7 @@ export default function Home() {
   const [cantidades, setCantidades] = useState<{ [key: string]: number }>({ '745': 25, '8182': 30, '2552': 14 });
   const [guardando, setGuardando] = useState(false);
   const [mensaje, setMensaje] = useState('');
+  const [ultimoCodigo, setUltimoCodigo] = useState('PED-3301');
 
   // Deltas Parametrizables FJ Kids (EMP-0001)
   const deltaL2 = 1000;
@@ -84,9 +86,9 @@ export default function Home() {
         setClienteSeleccionado(data[0].id);
       } else {
         const respaldo = [
-          { id: '1', nit: '901164484-3', razon_social: 'Comercializadora Palacio S.A.S', nombre_comercial: 'El Palacio de la Pantaleta #1 Montería', ciudad: 'Montería' },
-          { id: '2', nit: '900314739-7', razon_social: 'Tendencias Futuristas S.A.S', nombre_comercial: 'La Media Naranja Montería', ciudad: 'Montería' },
-          { id: '3', nit: '900050852-7', razon_social: 'Inversiones La Pantaleta S.A.S', nombre_comercial: 'El Palacio de la Pantaleta #3 Montería', ciudad: 'Montería' }
+          { id: '1', nit: '901164484-3', razon_social: 'Comercializadora Palacio S.A.S', nombre_comercial: 'El Palacio de la Pantaleta #1 Montería', ciudad: 'Montería', telefono: '573000000000' },
+          { id: '2', nit: '900314739-7', razon_social: 'Tendencias Futuristas S.A.S', nombre_comercial: 'La Media Naranja Montería', ciudad: 'Montería', telefono: '573000000000' },
+          { id: '3', nit: '900050852-7', razon_social: 'Inversiones La Pantaleta S.A.S', nombre_comercial: 'El Palacio de la Pantaleta #3 Montería', ciudad: 'Montería', telefono: '573000000000' }
         ];
         setClientes(respaldo);
         setClienteSeleccionado('1');
@@ -110,7 +112,7 @@ export default function Home() {
 
   const totalPrendas = Object.values(cantidades).reduce((a, b) => a + b, 0);
   const subtotalCOP = productos.reduce((acc, p) => acc + ((cantidades[p.referencia] || 0) * getPrecio(p.precio_L1_base)), 0);
-  const comisionCOP = subtotalCOP * 0.06; // 6% Vendedor
+  const comisionCOP = subtotalCOP * 0.06;
 
   // Guardar Pedido en PostgreSQL & Audit Log
   const guardarPedido = async () => {
@@ -118,8 +120,8 @@ export default function Home() {
       setGuardando(true);
       setMensaje('');
       const codigoOrder = `PED-${Math.floor(1000 + Math.random() * 9000)}`;
+      setUltimoCodigo(codigoOrder);
 
-      // 1. Insertar Encabezado del Pedido
       await supabase.from('pedidos').insert([
         {
           tenant_id: 'EMP-0001',
@@ -135,7 +137,6 @@ export default function Home() {
         }
       ]);
 
-      // 2. Registrar Auditoría Gerencial Inmutable (Audit Log)
       await supabase.from('audit_logs').insert([
         {
           tenant_id: 'EMP-0001',
@@ -164,6 +165,26 @@ export default function Home() {
     }
   };
 
+  // Exportar / Imprimir PDF
+  const exportarPDF = () => {
+    window.print();
+  };
+
+  // Enviar Notificación por WhatsApp
+  const enviarWhatsApp = () => {
+    const texto = `*PEQUIX ERP · COMPROBANTE DE PEDIDO FORMAL*%0A%0A` +
+      `*Orden:* ${ultimoCodigo}%0A` +
+      `*Cliente:* ${actualCliente?.nombre_comercial}%0A` +
+      `*NIT:* ${actualCliente?.nit}%0A` +
+      `*Asesor:* Adrián Peña (FJ Kids)%0A` +
+      `*Lista Aplicada:* ${lista}%0A` +
+      `*Total Prendas:* ${totalPrendas} unds%0A` +
+      `*Total Pedido:* $ ${subtotalCOP.toLocaleString('es-CO')} COP%0A%0A` +
+      `_Generado desde Pequix ERP SaaS (EMP-0001 / FJ Kids)_ 🚀`;
+
+    window.open(`https://api.whatsapp.com/send?text=${texto}`, '_blank');
+  };
+
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#090d16', color: '#f8fafc', padding: '20px', fontFamily: 'sans-serif' }}>
       <div style={{ maxWidth: '850px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -172,9 +193,9 @@ export default function Home() {
         <div style={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', padding: '20px', borderRadius: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
           <div>
             <span style={{ backgroundColor: '#10b981', color: '#022c22', fontWeight: '900', fontSize: '11px', padding: '4px 10px', borderRadius: '6px', textTransform: 'uppercase' }}>
-              🟢 MÓDULO 1: PEDIDOS B2B & CRM
+              🟢 MÓDULO 1: PEDIDOS & EXPORTACIÓN
             </span>
-            <h1 style={{ fontSize: '1.4rem', fontWeight: '900', margin: '8px 0 0 0', color: '#ffffff' }}>Toma de Pedidos & CRM Clientes Holding</h1>
+            <h1 style={{ fontSize: '1.4rem', fontWeight: '900', margin: '8px 0 0 0', color: '#ffffff' }}>Toma de Pedidos & Cierre B2B</h1>
             <p style={{ margin: '4px 0 0 0', color: '#94a3b8', fontSize: '12px' }}>
               Asesor Comercial: <strong style={{ color: '#fbbf24' }}>Adrián Peña (USR-0001 / V2)</strong> — Tenant: EMP-0001 (FJ Kids)
             </p>
@@ -247,7 +268,7 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Tabla Matriz de Productos con Ajuste de Cantidad */}
+        {/* Tabla Matriz de Productos */}
         <div style={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', padding: '20px', borderRadius: '16px', overflowX: 'auto' }}>
           <table style={{ width: '100%', textAlign: 'left', fontSize: '12px', borderCollapse: 'collapse' }}>
             <thead>
@@ -290,7 +311,7 @@ export default function Home() {
           </table>
         </div>
 
-        {/* Resumen Financiero & Botón de Guardado */}
+        {/* Resumen Financiero & Acciones de Exportación */}
         <div style={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', padding: '20px', borderRadius: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px' }}>
           <div>
             <span style={{ fontSize: '10px', color: '#94a3b8', textTransform: 'uppercase', display: 'block', fontWeight: 'bold' }}>Total Calculado del Pedido:</span>
@@ -302,22 +323,54 @@ export default function Home() {
             </span>
           </div>
 
-          <div style={{ display: 'flex', gap: '10px' }}>
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
             <button
               onClick={guardarPedido}
               disabled={guardando}
               style={{
-                padding: '12px 24px',
+                padding: '12px 18px',
                 borderRadius: '10px',
                 border: 'none',
                 fontWeight: '900',
                 cursor: 'pointer',
                 backgroundColor: '#10b981',
                 color: '#022c22',
-                fontSize: '13px'
+                fontSize: '12px'
               }}
             >
-              {guardando ? '⏳ Guardando...' : '💾 Confirmar & Guardar Pedido'}
+              {guardando ? '⏳ Guardando...' : '💾 Confirmar Pedido'}
+            </button>
+
+            <button
+              onClick={exportarPDF}
+              style={{
+                padding: '12px 18px',
+                borderRadius: '10px',
+                border: '1px solid #38bdf8',
+                fontWeight: '900',
+                cursor: 'pointer',
+                backgroundColor: '#0284c7',
+                color: '#ffffff',
+                fontSize: '12px'
+              }}
+            >
+              📄 Generar PDF
+            </button>
+
+            <button
+              onClick={enviarWhatsApp}
+              style={{
+                padding: '12px 18px',
+                borderRadius: '10px',
+                border: 'none',
+                fontWeight: '900',
+                cursor: 'pointer',
+                backgroundColor: '#22c55e',
+                color: '#022c22',
+                fontSize: '12px'
+              }}
+            >
+              📲 Enviar WhatsApp
             </button>
           </div>
         </div>
