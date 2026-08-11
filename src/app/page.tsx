@@ -57,7 +57,7 @@ export default function Home() {
   const [carrito, setCarrito] = useState<{ [key: string]: number }>({});
   const [mensaje, setMensaje] = useState('');
 
-  // Llave Pública Producción Wompi Colombia (FJ Kids / Automerco)
+  // Credenciales Wompi Producción
   const wompiPublicKey = 'pub_prod_nNuIXKqeLhROFF29YF7UIVBMItu6ryaN';
 
   const [productos, setProductos] = useState<Producto[]>([
@@ -73,16 +73,6 @@ export default function Home() {
       if (data && data.length > 0) setProductos(data);
     }
     cargar();
-
-    // Cargar Dinámicamente el Widget Oficial de Wompi Producción
-    const idScript = 'wompi-widget-script';
-    if (!document.getElementById(idScript)) {
-      const script = document.createElement('script');
-      script.id = idScript;
-      script.src = 'https://checkout.wompi.co/widget.js';
-      script.async = true;
-      document.body.appendChild(script);
-    }
   }, []);
 
   const getPrecioTienda = (p: Producto) => {
@@ -107,8 +97,8 @@ export default function Home() {
     setMensaje(`🎉 Tarifa L1 Mayorista activada para NIT: ${nitMayorista}`);
   };
 
-  // Abrir Widget Oficial de Wompi Producción
-  const pagarConWompiOficial = async () => {
+  // Disparo Sincrónico Inmediato del Widget Wompi
+  const pagarConWompiSincronico = () => {
     if (totalPagarCOP === 0) {
       setMensaje('⚠️ El carrito está vacío.');
       return;
@@ -117,18 +107,7 @@ export default function Home() {
     const referenciaWompi = `PED-${Date.now()}`;
     const valorEnCentavos = totalPagarCOP * 100;
 
-    // Registrar Pedido Inicial en Estado Pendiente en Supabase
-    await supabase.from('pedidos').insert([{
-      tenant_id: 'EMP-0001',
-      codigo_pedido: referenciaWompi,
-      vendedor_nombre: esMayorista ? `Mayorista (${nitMayorista})` : 'Cliente Web B2C',
-      lista_aplicada: esMayorista ? 'L1_MAYORISTA' : 'L3_DETAL',
-      total_prendas: totalUnidadesCarrito,
-      subtotal_cop: totalPagarCOP,
-      estado: 'PENDIENTE_PAGO_WOMPI'
-    }]);
-
-    // Instanciar Widget Flotante Oficial de Wompi
+    // Abrir Widget Flotante mediante Script Dinámico Sincrónico
     // @ts-ignore
     if (typeof WidgetCheckout !== 'undefined') {
       // @ts-ignore
@@ -140,26 +119,29 @@ export default function Home() {
         redirectUrl: 'https://pequix-erp-core.vercel.app'
       });
 
-      checkout.open(async (result: any) => {
+      checkout.open((result: any) => {
         const transaction = result.transaction;
         if (transaction && transaction.status === 'APPROVED') {
-          await supabase.from('pedidos').insert([{
-            tenant_id: 'EMP-0001',
-            codigo_pedido: referenciaWompi,
-            vendedor_nombre: esMayorista ? `Mayorista (${nitMayorista})` : 'Cliente Web B2C',
-            lista_aplicada: esMayorista ? 'L1_MAYORISTA' : 'L3_DETAL',
-            total_prendas: totalUnidadesCarrito,
-            subtotal_cop: totalPagarCOP,
-            estado: 'PAGADO_PRODUCCION_WOMPI'
-          }]);
-
           setMensaje(`✅ ¡Pago REAL APROBADO por $ ${totalPagarCOP.toLocaleString('es-CO')} COP! Orden: ${referenciaWompi}`);
           setCarrito({});
         }
       });
     } else {
-      setMensaje('⏳ Cargar pasarela Wompi... Reintentando en 2 segundos.');
-      setTimeout(pagarConWompiOficial, 2000);
+      // Si el script no ha cargado, se instancia el script directamente en el DOM y se reintenta
+      const script = document.createElement('script');
+      script.src = 'https://checkout.wompi.co/widget.js';
+      script.onload = () => {
+        // @ts-ignore
+        const checkout = new WidgetCheckout({
+          currency: 'COP',
+          amountInCents: valorEnCentavos,
+          reference: referenciaWompi,
+          publicKey: wompiPublicKey,
+          redirectUrl: 'https://pequix-erp-core.vercel.app'
+        });
+        checkout.open(() => {});
+      };
+      document.body.appendChild(script);
     }
   };
 
@@ -259,7 +241,7 @@ export default function Home() {
           </div>
 
           <button
-            onClick={pagarConWompiOficial}
+            onClick={pagarConWompiSincronico}
             disabled={totalUnidadesCarrito === 0}
             style={{
               padding: '14px 28px',
