@@ -56,9 +56,7 @@ export default function Home() {
   const [nitMayorista, setNitMayorista] = useState('');
   const [carrito, setCarrito] = useState<{ [key: string]: number }>({});
   const [mensaje, setMensaje] = useState('');
-
-  // Credenciales Wompi Producción
-  const wompiPublicKey = 'pub_prod_nNuIXKqeLhROFF29YF7UIVBMItu6ryaN';
+  const [cargando, setCargando] = useState(false);
 
   const [productos, setProductos] = useState<Producto[]>([
     { referencia: '745', descripcion: 'CONJUNTO BEBE DORMILON', curva: 'BEBÉS', precio_L1_base: 59900, mostrar_en_website: true },
@@ -97,51 +95,46 @@ export default function Home() {
     setMensaje(`🎉 Tarifa L1 Mayorista activada para NIT: ${nitMayorista}`);
   };
 
-  // Disparo Sincrónico Inmediato del Widget Wompi
-  const pagarConWompiSincronico = () => {
+  // Iniciar Pago por Backend Seguro
+  const procesarPagoWompiBackend = async () => {
     if (totalPagarCOP === 0) {
       setMensaje('⚠️ El carrito está vacío.');
       return;
     }
 
-    const referenciaWompi = `PED-${Date.now()}`;
-    const valorEnCentavos = totalPagarCOP * 100;
+    try {
+      setCargando(true);
+      const referenciaWompi = `PED-${Date.now()}`;
 
-    // Abrir Widget Flotante mediante Script Dinámico Sincrónico
-    // @ts-ignore
-    if (typeof WidgetCheckout !== 'undefined') {
-      // @ts-ignore
-      const checkout = new WidgetCheckout({
-        currency: 'COP',
-        amountInCents: valorEnCentavos,
-        reference: referenciaWompi,
-        publicKey: wompiPublicKey,
-        redirectUrl: 'https://pequix-erp-core.vercel.app'
+      // Registrar Pedido Inicial en PostgreSQL
+      await supabase.from('pedidos').insert([{
+        tenant_id: 'EMP-0001',
+        codigo_pedido: referenciaWompi,
+        vendedor_nombre: esMayorista ? `Mayorista (${nitMayorista})` : 'Cliente Web B2C',
+        lista_aplicada: esMayorista ? 'L1_MAYORISTA' : 'L3_DETAL',
+        total_prendas: totalUnidadesCarrito,
+        subtotal_cop: totalPagarCOP,
+        estado: 'PENDIENTE_PAGO_WOMPI'
+      }]);
+
+      // Petición a la API Route de Backend
+      const res = await fetch('/api/wompi-pago', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ totalCOP: totalPagarCOP, referencia: referenciaWompi })
       });
 
-      checkout.open((result: any) => {
-        const transaction = result.transaction;
-        if (transaction && transaction.status === 'APPROVED') {
-          setMensaje(`✅ ¡Pago REAL APROBADO por $ ${totalPagarCOP.toLocaleString('es-CO')} COP! Orden: ${referenciaWompi}`);
-          setCarrito({});
-        }
-      });
-    } else {
-      // Si el script no ha cargado, se instancia el script directamente en el DOM y se reintenta
-      const script = document.createElement('script');
-      script.src = 'https://checkout.wompi.co/widget.js';
-      script.onload = () => {
-        // @ts-ignore
-        const checkout = new WidgetCheckout({
-          currency: 'COP',
-          amountInCents: valorEnCentavos,
-          reference: referenciaWompi,
-          publicKey: wompiPublicKey,
-          redirectUrl: 'https://pequix-erp-core.vercel.app'
-        });
-        checkout.open(() => {});
-      };
-      document.body.appendChild(script);
+      const data = await res.json();
+
+      if (data.success && data.checkoutUrl) {
+        window.location.href = data.checkoutUrl;
+      } else {
+        setMensaje('⚠️ No se pudo generar la pasarela. Verifica el estado de la cuenta en Wompi.');
+      }
+    } catch (err) {
+      setMensaje('❌ Ocurrió un error al conectar con el servidor de pagos.');
+    } finally {
+      setCargando(false);
     }
   };
 
@@ -231,7 +224,7 @@ export default function Home() {
           })}
         </div>
 
-        {/* Resumen Financiero & Wompi Producción */}
+        {/* Resumen Financiero & Wompi Producción Backend */}
         <div style={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', padding: '20px', borderRadius: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px' }}>
           <div>
             <span style={{ fontSize: '10px', color: '#94a3b8', textTransform: 'uppercase', display: 'block', fontWeight: 'bold' }}>Total a Pagar por Pasarela Wompi:</span>
@@ -241,8 +234,8 @@ export default function Home() {
           </div>
 
           <button
-            onClick={pagarConWompiSincronico}
-            disabled={totalUnidadesCarrito === 0}
+            onClick={procesarPagoWompiBackend}
+            disabled={totalUnidadesCarrito === 0 || cargando}
             style={{
               padding: '14px 28px',
               borderRadius: '10px',
@@ -254,7 +247,7 @@ export default function Home() {
               fontSize: '13px'
             }}
           >
-            💳 Pagar con Wompi ($ COP)
+            {cargando ? '⏳ Conectando Pasarela Backend...' : '💳 Pagar con Wompi ($ COP)'}
           </button>
         </div>
 
