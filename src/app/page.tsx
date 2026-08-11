@@ -58,8 +58,8 @@ interface Cliente {
 }
 
 export default function Home() {
+  const [rolActivo, setRolActivo] = useState<'ADMIN' | 'BODEGA'>('ADMIN');
   const [lista, setLista] = useState<'L1' | 'L2' | 'L3' | 'L4'>('L1');
-  const [visibilidad, setVisibilidad] = useState<'CON_VALORES' | 'SOLO_UNITARIO' | 'SIN_VALORES'>('CON_VALORES');
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [clienteSeleccionado, setClienteSeleccionado] = useState<string>('');
   const [cantidades, setCantidades] = useState<{ [key: string]: number }>({ '745': 25, '8182': 30, '2552': 14 });
@@ -113,6 +113,22 @@ export default function Home() {
   const subtotalCOP = productos.reduce((acc, p) => acc + ((cantidades[p.referencia] || 0) * getPrecio(p.precio_L1_base)), 0);
   const comisionCOP = subtotalCOP * 0.06;
 
+  // Cambiar Rol con Registro de Auditoría
+  const cambiarRol = async (nuevoRol: 'ADMIN' | 'BODEGA') => {
+    setRolActivo(nuevoRol);
+    await supabase.from('audit_logs').insert([
+      {
+        tenant_id: 'EMP-0001',
+        usuario_id: nuevoRol === 'ADMIN' ? 'USR-0001' : 'USR-0002',
+        usuario_nombre: nuevoRol === 'ADMIN' ? 'Adrián Peña' : 'Luz Deisy (Bodega)',
+        accion: 'CAMBIO_ROL_VISTA',
+        entidad_afectada: 'PERMISOS',
+        entidad_id: nuevoRol,
+        valor_nuevo: { rol: nuevoRol, fecha: new Date().toISOString() }
+      }
+    ]);
+  };
+
   // Guardar Pedido en PostgreSQL & Audit Log
   const guardarPedido = async () => {
     try {
@@ -126,8 +142,8 @@ export default function Home() {
           tenant_id: 'EMP-0001',
           codigo_pedido: codigoOrder,
           cliente_id: clienteSeleccionado,
-          vendedor_id: 'USR-0001',
-          vendedor_nombre: 'Adrián Peña',
+          vendedor_id: rolActivo === 'ADMIN' ? 'USR-0001' : 'USR-0002',
+          vendedor_nombre: rolActivo === 'ADMIN' ? 'Adrián Peña' : 'Luz Deisy (Bodega)',
           lista_aplicada: lista,
           total_prendas: totalPrendas,
           subtotal_cop: subtotalCOP,
@@ -139,8 +155,8 @@ export default function Home() {
       await supabase.from('audit_logs').insert([
         {
           tenant_id: 'EMP-0001',
-          usuario_id: 'USR-0001',
-          usuario_nombre: 'Adrián Peña',
+          usuario_id: rolActivo === 'ADMIN' ? 'USR-0001' : 'USR-0002',
+          usuario_nombre: rolActivo === 'ADMIN' ? 'Adrián Peña' : 'Luz Deisy (Bodega)',
           accion: 'CREAR_PEDIDO_B2B',
           entidad_afectada: 'PEDIDOS',
           entidad_id: codigoOrder,
@@ -148,8 +164,7 @@ export default function Home() {
             cliente: actualCliente?.nombre_comercial,
             nit: actualCliente?.nit,
             total_prendas: totalPrendas,
-            total_cop: subtotalCOP,
-            comision_asesor: comisionCOP,
+            total_cop: rolActivo === 'ADMIN' ? subtotalCOP : 'OCULTO_BODEGA',
             lista_aplicada: lista,
             fecha: new Date().toISOString()
           }
@@ -164,7 +179,7 @@ export default function Home() {
     }
   };
 
-  // Generador PDF con Nombre Personalizado por Orden y Nombre de Sucursal/Cliente
+  // Generador PDF Nombrado Dinámicamente
   const descargarPDFReal = () => {
     const nombreClienteLimpio = (actualCliente?.nombre_comercial || 'Cliente')
       .replace(/[^a-zA-Z0-9]/g, '_')
@@ -184,8 +199,13 @@ export default function Home() {
           <td style="padding: 8px; border-bottom: 1px solid #ddd;">${p.descripcion}</td>
           <td style="padding: 8px; border-bottom: 1px solid #ddd;">${p.curva}</td>
           <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: center;">${cant} unds</td>
-          <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right;">$ ${u.toLocaleString('es-CO')}</td>
-          <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right; font-weight: bold; color: #10b981;">$ ${(cant * u).toLocaleString('es-CO')}</td>
+          ${rolActivo === 'ADMIN' ? `
+            <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right;">$ ${u.toLocaleString('es-CO')}</td>
+            <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right; font-weight: bold; color: #10b981;">$ ${(cant * u).toLocaleString('es-CO')}</td>
+          ` : `
+            <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right; color: #94a3b8;">🔒 Oculto</td>
+            <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right; color: #94a3b8;">🔒 Oculto</td>
+          `}
         </tr>
       `;
     }).join('');
@@ -213,7 +233,7 @@ export default function Home() {
         <div class="header">
           <div>
             <div class="title">PEQUIX ERP · COMPROBANTE DE PEDIDO FORMAL</div>
-            <div class="subtitle">Tenant: EMP-0001 (FJ Kids) — Asesor: Adrián Peña</div>
+            <div class="subtitle">Tenant: EMP-0001 (FJ Kids) — Usuario: ${rolActivo === 'ADMIN' ? 'Adrián Peña' : 'Bodega Despacho'}</div>
           </div>
           <div style="text-align: right;">
             <div style="font-size: 16px; font-weight: bold; color: #d97706;">${ultimoCodigo}</div>
@@ -246,7 +266,7 @@ export default function Home() {
 
         <div class="total-box">
           TOTAL PRENDAS: ${totalPrendas} unds<br/>
-          TOTAL PEDIDO: $ ${subtotalCOP.toLocaleString('es-CO')} COP
+          ${rolActivo === 'ADMIN' ? `TOTAL PEDIDO: $ ${subtotalCOP.toLocaleString('es-CO')} COP` : 'TOTAL PEDIDO: 🔒 CONFIDENCIAL BODEGA'}
         </div>
 
         <div class="footer">
@@ -269,46 +289,56 @@ export default function Home() {
     ventana.document.close();
   };
 
-  // Enviar WhatsApp con Enlace al PDF Renderizable
-  const enviarWhatsAppConPDF = () => {
-    const nombreClienteLimpio = (actualCliente?.nombre_comercial || 'Cliente')
-      .replace(/[^a-zA-Z0-9]/g, '_')
-      .replace(/_+/g, '_');
-    
-    const urlDocumento = `https://pequix-erp-core.vercel.app/?order=${ultimoCodigo}_${nombreClienteLimpio}`;
-    
-    const texto = `*PEQUIX ERP · COMPROBANTE DE PEDIDO FORMAL*%0A%0A` +
-      `📌 *Orden:* ${ultimoCodigo}%0A` +
-      `🏢 *Cliente:* ${actualCliente?.nombre_comercial}%0A` +
-      `🆔 *NIT:* ${actualCliente?.nit}%0A` +
-      `👤 *Asesor Comercial:* Adrián Peña (FJ Kids)%0A` +
-      `📋 *Lista Aplicada:* ${lista}%0A` +
-      `📦 *Total Prendas:* ${totalPrendas} unds%0A` +
-      `💰 *Total Pedido:* $ ${subtotalCOP.toLocaleString('es-CO')} COP%0A%0A` +
-      `📄 *Descargar PDF Oficial del Pedido (${ultimoCodigo}):*%0A${urlDocumento}%0A%0A` +
-      `_Generado automáticamente desde Pequix ERP SaaS (EMP-0001 / FJ Kids)_ 🚀`;
-
-    window.open(`https://api.whatsapp.com/send?text=${texto}`, '_blank');
-  };
-
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#090d16', color: '#f8fafc', padding: '20px', fontFamily: 'sans-serif' }}>
       <div style={{ maxWidth: '850px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '20px' }}>
         
-        {/* Header Tenant FJ Kids */}
+        {/* Header Tenant & Selector de Perfil/Rol */}
         <div style={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', padding: '20px', borderRadius: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
           <div>
-            <span style={{ backgroundColor: '#10b981', color: '#022c22', fontWeight: '900', fontSize: '11px', padding: '4px 10px', borderRadius: '6px', textTransform: 'uppercase' }}>
-              🟢 PEQUIX ERP CORE · PDF NOMBRADO
-            </span>
-            <h1 style={{ fontSize: '1.4rem', fontWeight: '900', margin: '8px 0 0 0', color: '#ffffff' }}>Cierre de Pedidos B2B & PDF Nombrado</h1>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '6px' }}>
+              <span style={{ backgroundColor: '#10b981', color: '#022c22', fontWeight: '900', fontSize: '11px', padding: '4px 10px', borderRadius: '6px', textTransform: 'uppercase' }}>
+                🟢 PEQUIX ERP CORE · MÓDULO ROLES & PERMISOS
+              </span>
+            </div>
+            <h1 style={{ fontSize: '1.4rem', fontWeight: '900', margin: '4px 0 0 0', color: '#ffffff' }}>Control de Accesos & Despacho Ciego</h1>
             <p style={{ margin: '4px 0 0 0', color: '#94a3b8', fontSize: '12px' }}>
-              Asesor Comercial: <strong style={{ color: '#fbbf24' }}>Adrián Peña (USR-0001 / V2)</strong> — Tenant: EMP-0001 (FJ Kids)
+              Usuario Activo: <strong style={{ color: '#fbbf24' }}>{rolActivo === 'ADMIN' ? 'Adrián Peña (USR-0001 / Admin)' : 'Luz Deisy (USR-0002 / Bodega)'}</strong> — EMP-0001 (FJ Kids)
             </p>
           </div>
-          <div style={{ backgroundColor: '#1e293b', padding: '12px 18px', borderRadius: '12px', textAlign: 'right' }}>
-            <span style={{ fontSize: '10px', color: '#94a3b8', display: 'block', textTransform: 'uppercase', fontWeight: 'bold' }}>Total Prendas:</span>
-            <span style={{ fontSize: '1.6rem', fontWeight: '900', color: '#fbbf24' }}>{totalPrendas} unds</span>
+
+          {/* Switch de Rol en Vivo */}
+          <div style={{ backgroundColor: '#1e293b', padding: '8px', borderRadius: '12px', display: 'flex', gap: '6px' }}>
+            <button
+              onClick={() => cambiarRol('ADMIN')}
+              style={{
+                padding: '8px 14px',
+                borderRadius: '8px',
+                border: 'none',
+                fontWeight: '900',
+                fontSize: '11px',
+                cursor: 'pointer',
+                backgroundColor: rolActivo === 'ADMIN' ? '#10b981' : 'transparent',
+                color: rolActivo === 'ADMIN' ? '#022c22' : '#94a3b8'
+              }}
+            >
+              👑 Admin / Vendedor
+            </button>
+            <button
+              onClick={() => cambiarRol('BODEGA')}
+              style={{
+                padding: '8px 14px',
+                borderRadius: '8px',
+                border: 'none',
+                fontWeight: '900',
+                fontSize: '11px',
+                cursor: 'pointer',
+                backgroundColor: rolActivo === 'BODEGA' ? '#f59e0b' : 'transparent',
+                color: rolActivo === 'BODEGA' ? '#451a03' : '#94a3b8'
+              }}
+            >
+              📦 Bodega (Vista Ciega)
+            </button>
           </div>
         </div>
 
@@ -343,37 +373,7 @@ export default function Home() {
           )}
         </div>
 
-        {/* Selector Tarifario Dinámico L1-L5 */}
-        <div style={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', padding: '20px', borderRadius: '16px' }}>
-          <label style={{ display: 'block', fontWeight: '800', fontSize: '12px', marginBottom: '12px', color: '#cbd5e1' }}>
-            🔄 Lista Tarifaria Aplicada al Pedido:
-          </label>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '10px' }}>
-            {(['L1', 'L2', 'L4', 'L3'] as const).map((l) => (
-              <button
-                key={l}
-                onClick={() => setLista(l)}
-                style={{
-                  padding: '12px',
-                  borderRadius: '10px',
-                  fontWeight: '900',
-                  fontSize: '11px',
-                  cursor: 'pointer',
-                  border: '1px solid #10b981',
-                  backgroundColor: lista === l ? '#10b981' : '#1e293b',
-                  color: lista === l ? '#022c22' : '#f8fafc'
-                }}
-              >
-                {l === 'L1' && 'L1 · MAYORISTA BASE'}
-                {l === 'L2' && 'L2 · DISTRIBUIDOR (+1K)'}
-                {l === 'L4' && 'L4 · LOCAL MEDELLÍN (-2K)'}
-                {l === 'L3' && 'L3 · DETAL / B2C (~70%)'}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Tabla Matriz de Productos */}
+        {/* Tabla Matriz de Productos con Permisos Granulares */}
         <div style={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', padding: '20px', borderRadius: '16px', overflowX: 'auto' }}>
           <table style={{ width: '100%', textAlign: 'left', fontSize: '12px', borderCollapse: 'collapse' }}>
             <thead>
@@ -404,10 +404,10 @@ export default function Home() {
                       />
                     </td>
                     <td style={{ padding: '12px 8px', textAlign: 'right', fontWeight: 'bold' }}>
-                      {visibilidad === 'SIN_VALORES' ? '🔒 Oculto' : `$ ${u.toLocaleString('es-CO')}`}
+                      {rolActivo === 'ADMIN' ? `$ ${u.toLocaleString('es-CO')}` : '🔒 Oculto (Bodega)'}
                     </td>
-                    <td style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '900', color: '#10b981' }}>
-                      {visibilidad === 'CON_VALORES' ? `$ ${(cant * u).toLocaleString('es-CO')}` : '🔒 Oculto'}
+                    <td style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '900', color: rolActivo === 'ADMIN' ? '#10b981' : '#94a3b8' }}>
+                      {rolActivo === 'ADMIN' ? `$ ${(cant * u).toLocaleString('es-CO')}` : '🔒 Oculto (Bodega)'}
                     </td>
                   </tr>
                 );
@@ -416,16 +416,22 @@ export default function Home() {
           </table>
         </div>
 
-        {/* Resumen Financiero & Acciones de Exportación */}
+        {/* Resumen Financiero Dinámico según el Rol */}
         <div style={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', padding: '20px', borderRadius: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px' }}>
           <div>
             <span style={{ fontSize: '10px', color: '#94a3b8', textTransform: 'uppercase', display: 'block', fontWeight: 'bold' }}>Total Calculado del Pedido:</span>
-            <div style={{ fontSize: '1.8rem', fontWeight: '900', color: '#10b981' }}>
-              {visibilidad === 'CON_VALORES' ? `$ ${subtotalCOP.toLocaleString('es-CO')} COP` : '🔒 TOTAL CONFIDENCIAL'}
+            <div style={{ fontSize: '1.8rem', fontWeight: '900', color: rolActivo === 'ADMIN' ? '#10b981' : '#f59e0b' }}>
+              {rolActivo === 'ADMIN' ? `$ ${subtotalCOP.toLocaleString('es-CO')} COP` : '🔒 VISTA CIEGA DE BODEGA'}
             </div>
-            <span style={{ fontSize: '12px', color: '#fbbf24', fontWeight: 'bold', display: 'block', marginTop: '4px' }}>
-              Comisión Asignada a Adrián Peña (6%): $ ${comisionCOP.toLocaleString('es-CO')} COP
-            </span>
+            {rolActivo === 'ADMIN' ? (
+              <span style={{ fontSize: '12px', color: '#fbbf24', fontWeight: 'bold', display: 'block', marginTop: '4px' }}>
+                Comisión Asignada a Adrián Peña (6%): $ ${comisionCOP.toLocaleString('es-CO')} COP
+              </span>
+            ) : (
+              <span style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 'bold', display: 'block', marginTop: '4px' }}>
+                Modo Alistamiento de Despacho: {totalPrendas} prendas por empacar.
+              </span>
+            )}
           </div>
 
           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
@@ -459,23 +465,7 @@ export default function Home() {
                 fontSize: '12px'
               }}
             >
-              📄 Descargar PDF Real
-            </button>
-
-            <button
-              onClick={enviarWhatsAppConPDF}
-              style={{
-                padding: '12px 18px',
-                borderRadius: '10px',
-                border: 'none',
-                fontWeight: '900',
-                cursor: 'pointer',
-                backgroundColor: '#22c55e',
-                color: '#022c22',
-                fontSize: '12px'
-              }}
-            >
-              📲 WhatsApp + Enlace PDF
+              📄 Generar PDF Nombrado
             </button>
           </div>
         </div>
