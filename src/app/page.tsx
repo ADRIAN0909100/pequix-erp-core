@@ -164,8 +164,14 @@ export default function Home() {
     }
   };
 
-  // Generador Real de Archivo PDF Descargable mediante Ventana HTML Imprimible / PDF
+  // Generador PDF con Nombre Personalizado por Orden y Nombre de Sucursal/Cliente
   const descargarPDFReal = () => {
+    const nombreClienteLimpio = (actualCliente?.nombre_comercial || 'Cliente')
+      .replace(/[^a-zA-Z0-9]/g, '_')
+      .replace(/_+/g, '_');
+    
+    const nombreArchivoPDF = `${ultimoCodigo}_${nombreClienteLimpio}`;
+
     const ventana = window.open('', '_blank');
     if (!ventana) return;
 
@@ -188,11 +194,13 @@ export default function Home() {
       <!DOCTYPE html>
       <html>
       <head>
-        <title>Comprobante_${ultimoCodigo}</title>
+        <meta charset="utf-8">
+        <title>${nombreArchivoPDF}</title>
         <style>
-          body { font-family: Arial, sans-serif; padding: 30px; color: #1e293b; }
+          @page { size: auto; margin: 15mm; }
+          body { font-family: Arial, sans-serif; padding: 20px; color: #1e293b; }
           .header { display: flex; justify-content: space-between; border-bottom: 2px solid #10b981; padding-bottom: 15px; margin-bottom: 20px; }
-          .title { font-size: 20px; font-weight: bold; color: #0f172a; }
+          .title { font-size: 18px; font-weight: bold; color: #0f172a; }
           .subtitle { font-size: 12px; color: #64748b; }
           .info-box { background-color: #f8fafc; border: 1px solid #e2e8f0; padding: 15px; border-radius: 8px; margin-bottom: 20px; font-size: 13px; }
           table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 20px; }
@@ -214,7 +222,7 @@ export default function Home() {
         </div>
 
         <div class="info-box">
-          <strong>Cliente:</strong> ${actualCliente?.nombre_comercial}<br/>
+          <strong>Sucursal / Cliente:</strong> ${actualCliente?.nombre_comercial}<br/>
           <strong>Razón Social:</strong> ${actualCliente?.razon_social}<br/>
           <strong>NIT:</strong> ${actualCliente?.nit}<br/>
           <strong>Lista Aplicada:</strong> ${lista}
@@ -246,8 +254,11 @@ export default function Home() {
         </div>
 
         <script>
+          document.title = "${nombreArchivoPDF}";
           window.onload = function() {
-            window.print();
+            setTimeout(function() {
+              window.print();
+            }, 300);
           };
         </script>
       </body>
@@ -260,7 +271,11 @@ export default function Home() {
 
   // Enviar WhatsApp con Enlace al PDF Renderizable
   const enviarWhatsAppConPDF = () => {
-    const urlDocumento = `https://pequix-erp-core.vercel.app/?order=${ultimoCodigo}&export=pdf`;
+    const nombreClienteLimpio = (actualCliente?.nombre_comercial || 'Cliente')
+      .replace(/[^a-zA-Z0-9]/g, '_')
+      .replace(/_+/g, '_');
+    
+    const urlDocumento = `https://pequix-erp-core.vercel.app/?order=${ultimoCodigo}_${nombreClienteLimpio}`;
     
     const texto = `*PEQUIX ERP · COMPROBANTE DE PEDIDO FORMAL*%0A%0A` +
       `📌 *Orden:* ${ultimoCodigo}%0A` +
@@ -270,7 +285,7 @@ export default function Home() {
       `📋 *Lista Aplicada:* ${lista}%0A` +
       `📦 *Total Prendas:* ${totalPrendas} unds%0A` +
       `💰 *Total Pedido:* $ ${subtotalCOP.toLocaleString('es-CO')} COP%0A%0A` +
-      `📄 *Descargar PDF Oficial del Pedido:*%0A${urlDocumento}%0A%0A` +
+      `📄 *Descargar PDF Oficial del Pedido (${ultimoCodigo}):*%0A${urlDocumento}%0A%0A` +
       `_Generado automáticamente desde Pequix ERP SaaS (EMP-0001 / FJ Kids)_ 🚀`;
 
     window.open(`https://api.whatsapp.com/send?text=${texto}`, '_blank');
@@ -284,9 +299,9 @@ export default function Home() {
         <div style={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', padding: '20px', borderRadius: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
           <div>
             <span style={{ backgroundColor: '#10b981', color: '#022c22', fontWeight: '900', fontSize: '11px', padding: '4px 10px', borderRadius: '6px', textTransform: 'uppercase' }}>
-              🟢 PEQUIX ERP CORE · GENERADOR PDF
+              🟢 PEQUIX ERP CORE · PDF NOMBRADO
             </span>
-            <h1 style={{ fontSize: '1.4rem', fontWeight: '900', margin: '8px 0 0 0', color: '#ffffff' }}>Cierre de Pedidos B2B & Descarga PDF</h1>
+            <h1 style={{ fontSize: '1.4rem', fontWeight: '900', margin: '8px 0 0 0', color: '#ffffff' }}>Cierre de Pedidos B2B & PDF Nombrado</h1>
             <p style={{ margin: '4px 0 0 0', color: '#94a3b8', fontSize: '12px' }}>
               Asesor Comercial: <strong style={{ color: '#fbbf24' }}>Adrián Peña (USR-0001 / V2)</strong> — Tenant: EMP-0001 (FJ Kids)
             </p>
