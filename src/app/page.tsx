@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 
 interface Producto {
+  id?: string;
   referencia: string;
   descripcion: string;
   curva: string;
@@ -10,55 +11,46 @@ interface Producto {
   mostrar_en_website: boolean;
 }
 
-interface Cliente {
-  id: string;
-  nit: string;
-  razon_social: string;
-  nombre_comercial: string;
-  ciudad: string;
-  lista_asignada: string;
-}
-
 export default function Home() {
   const [lista, setLista] = useState<'L1' | 'L2' | 'L3' | 'L4'>('L1');
   const [visibilidad, setVisibilidad] = useState<'CON_VALORES' | 'SOLO_UNITARIO' | 'SIN_VALORES'>('CON_VALORES');
-  const [clientes, setClientes] = useState<Cliente[]>([]);
-  const [clienteSeleccionado, setClienteSeleccionado] = useState<string>('');
-  const [cantidades, setCantidades] = useState<{ [key: string]: number }>({ '745': 25, '8182': 30, '2552': 14 });
-  const [guardando, setGuardando] = useState(false);
+  const [productos, setProductos] = useState<Producto[]>([]);
+  const [logs, setLogs] = useState<any[]>([]);
+  const [cargando, setCargando] = useState(true);
   const [mensaje, setMensaje] = useState('');
 
   // Deltas Parametrizables FJ Kids (EMP-0001)
   const deltaL2 = 1000;
   const deltaL4 = -2000;
 
-  const productos: Producto[] = [
-    { referencia: '745', descripcion: 'CONJUNTO BEBE DORMILON', curva: 'BEBÉS', precio_L1_base: 59900, mostrar_en_website: true },
-    { referencia: '8182', descripcion: 'CONJUNTO BEBE PREMIUM', curva: 'BEBÉS', precio_L1_base: 70900, mostrar_en_website: true },
-    { referencia: '2552', descripcion: 'CONJUNTO JUNIOR BASICO', curva: 'JUNIOR', precio_L1_base: 43900, mostrar_en_website: true }
-  ];
+  // Cargar Productos y Logs desde Supabase PostgreSQL
+  const cargarDatos = async () => {
+    try {
+      setCargando(true);
+      const { data: dataProds } = await supabase.from('productos').select('*');
+      const { data: dataLogs } = await supabase.from('audit_logs').select('*');
+
+      if (dataProds && dataProds.length > 0) {
+        setProductos(dataProds);
+      } else {
+        setProductos([
+          { referencia: '745', descripcion: 'CONJUNTO BEBE DORMILON', curva: 'BEBÉS', precio_L1_base: 59900, mostrar_en_website: true },
+          { referencia: '8182', descripcion: 'CONJUNTO BEBE PREMIUM', curva: 'BEBÉS', precio_L1_base: 70900, mostrar_en_website: true },
+          { referencia: '2552', descripcion: 'CONJUNTO JUNIOR BASICO', curva: 'JUNIOR', precio_L1_base: 43900, mostrar_en_website: true }
+        ]);
+      }
+
+      if (dataLogs) setLogs(dataLogs.slice(-5).reverse());
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setCargando(false);
+    }
+  };
 
   useEffect(() => {
-    async function cargarClientes() {
-      const { data } = await supabase.from('clientes').select('*');
-      if (data && data.length > 0) {
-        setClientes(data);
-        setClienteSeleccionado(data[0].id);
-      } else {
-        // Datos locales de respaldo si la tabla no se ha poblado
-        const respaldo = [
-          { id: '1', nit: '901164484-3', razon_social: 'Comercializadora Palacio S.A.S', nombre_comercial: 'El Palacio de la Pantaleta #1 Montería', ciudad: 'Montería', lista_asignada: 'L1' },
-          { id: '2', nit: '900314739-7', razon_social: 'Tendencias Futuristas S.A.S', nombre_comercial: 'La Media Naranja Montería', ciudad: 'Montería', lista_asignada: 'L2' },
-          { id: '3', nit: '900050852-7', razon_social: 'Inversiones La Pantaleta S.A.S', nombre_comercial: 'El Palacio de la Pantaleta #3 Montería', ciudad: 'Montería', lista_asignada: 'L1' }
-        ];
-        setClientes(respaldo);
-        setClienteSeleccionado('1');
-      }
-    }
-    cargarClientes();
+    cargarDatos();
   }, []);
-
-  const actualCliente = clientes.find(c => c.id === clienteSeleccionado);
 
   const getPrecio = (base: number) => {
     if (lista === 'L2') return base + deltaL2;
@@ -67,64 +59,30 @@ export default function Home() {
     return base;
   };
 
-  const handleCantidadChange = (ref: string, val: number) => {
-    setCantidades(prev => ({ ...prev, [ref]: Math.max(0, val) }));
+  // Switch de Visibilidad Web (B2B / B2C) con Registro de Auditoría Inmutable
+  const toggleWebsite = async (ref: string, estadoActual: boolean) => {
+    const nuevoEstado = !estadoActual;
+    setProductos(prev => prev.map(p => p.referencia === ref ? { ...p, mostrar_en_website: nuevoEstado } : p));
+
+    // Guardar Traza en Audit Log
+    await supabase.from('audit_logs').insert([
+      {
+        tenant_id: 'EMP-0001',
+        usuario_id: 'USR-0001',
+        usuario_nombre: 'Adrián Peña',
+        accion: 'TOGGLE_VISIBILIDAD_WEB',
+        entidad_afectada: 'PRODUCTOS',
+        entidad_id: ref,
+        valor_nuevo: { referencia: ref, visible_web: nuevoEstado, fecha: new Date().toISOString() }
+      }
+    ]);
+
+    setMensaje(`✨ Visibilidad Web actualizada para REF ${ref}: ${nuevoEstado ? 'Visible 🌐' : 'Oculto 🔒'}`);
+    cargarDatos();
   };
 
-  const totalPrendas = Object.values(cantidades).reduce((a, b) => a + b, 0);
-  const subtotalCOP = productos.reduce((acc, p) => acc + ((cantidades[p.referencia] || 0) * getPrecio(p.precio_L1_base)), 0);
-  const comisionCOP = subtotalCOP * 0.06; // 6% Vendedor
-
-  // Guardar Pedido en PostgreSQL & Audit Log
-  const guardarPedido = async () => {
-    try {
-      setGuardando(true);
-      setMensaje('');
-      const codigoOrder = `PED-${Math.floor(1000 + Math.random() * 9000)}`;
-
-      // 1. Insertar Pedido
-      await supabase.from('pedidos').insert([
-        {
-          tenant_id: 'EMP-0001',
-          codigo_pedido: codigoOrder,
-          cliente_id: clienteSeleccionado,
-          vendedor_id: 'USR-0001',
-          vendedor_nombre: 'Adrián Peña',
-          lista_aplicada: lista,
-          total_prendas: totalPrendas,
-          subtotal_cop: subtotalCOP,
-          comision_cop: comisionCOP,
-          estado: 'CONFIRMADO'
-        }
-      ]);
-
-      // 2. Registrar Auditoría Gerencial Inmutable (Audit Log)
-      await supabase.from('audit_logs').insert([
-        {
-          tenant_id: 'EMP-0001',
-          usuario_id: 'USR-0001',
-          usuario_nombre: 'Adrián Peña',
-          accion: 'CREAR_PEDIDO_B2B',
-          entidad_afectada: 'PEDIDOS',
-          entidad_id: codigoOrder,
-          valor_nuevo: {
-            cliente: actualCliente?.nombre_comercial,
-            nit: actualCliente?.nit,
-            total_prendas: totalPrendas,
-            total_cop: subtotalCOP,
-            comision_asesor: comisionCOP,
-            lista: lista
-          }
-        }
-      ]);
-
-      setMensaje(`🎉 ¡Pedido ${codigoOrder} Confirmado y Registrado en PostgreSQL & Audit Log!`);
-    } catch (err) {
-      setMensaje('❌ Error al registrar el pedido en la base de datos.');
-    } finally {
-      setGuardando(false);
-    }
-  };
+  const totalPrendas = productos.length * 20;
+  const subtotalCOP = productos.reduce((acc, p) => acc + (20 * getPrecio(p.precio_L1_base)), 0);
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#090d16', color: '#f8fafc', padding: '20px', fontFamily: 'sans-serif' }}>
@@ -134,55 +92,29 @@ export default function Home() {
         <div style={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', padding: '20px', borderRadius: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
           <div>
             <span style={{ backgroundColor: '#10b981', color: '#022c22', fontWeight: '900', fontSize: '11px', padding: '4px 10px', borderRadius: '6px', textTransform: 'uppercase' }}>
-              🟢 PEQUIX ERP CORE · MÓDULO DE PEDIDOS B2B
+              🟢 PEQUIX ERP CORE · INVENTARIO & AUDITORÍA
             </span>
-            <h1 style={{ fontSize: '1.4rem', fontWeight: '900', margin: '8px 0 0 0', color: '#ffffff' }}>Gestión de Pedidos & CRM Clientes</h1>
+            <h1 style={{ fontSize: '1.4rem', fontWeight: '900', margin: '8px 0 0 0', color: '#ffffff' }}>Matriz Textil Infantil & Audit Log Live</h1>
             <p style={{ margin: '4px 0 0 0', color: '#94a3b8', fontSize: '12px' }}>
-              Asesor Comercial: <strong style={{ color: '#fbbf24' }}>Adrián Peña (USR-0001 / V2)</strong> — Tenant: EMP-0001 (FJ Kids)
+              Administrador: <strong style={{ color: '#fbbf24' }}>Adrián Peña (USR-0001 / V2)</strong> — Tenant: EMP-0001 (FJ Kids)
             </p>
           </div>
           <div style={{ backgroundColor: '#1e293b', padding: '12px 18px', borderRadius: '12px', textAlign: 'right' }}>
-            <span style={{ fontSize: '10px', color: '#94a3b8', display: 'block', textTransform: 'uppercase', fontWeight: 'bold' }}>Total Prendas:</span>
+            <span style={{ fontSize: '10px', color: '#94a3b8', display: 'block', textTransform: 'uppercase', fontWeight: 'bold' }}>Total Estimado:</span>
             <span style={{ fontSize: '1.6rem', fontWeight: '900', color: '#fbbf24' }}>{totalPrendas} unds</span>
           </div>
         </div>
 
-        {/* Notificación de Éxito */}
         {mensaje && (
-          <div style={{ backgroundColor: '#064e3b', border: '1px solid #10b981', color: '#6ee7b7', padding: '14px', borderRadius: '12px', fontWeight: 'bold', fontSize: '13px', textAlign: 'center' }}>
+          <div style={{ backgroundColor: '#064e3b', border: '1px solid #10b981', color: '#6ee7b7', padding: '12px', borderRadius: '12px', fontWeight: 'bold', fontSize: '12px', textAlign: 'center' }}>
             {mensaje}
           </div>
         )}
 
-        {/* Selector CRM de Clientes */}
-        <div style={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', padding: '20px', borderRadius: '16px' }}>
-          <label style={{ display: 'block', fontWeight: '800', fontSize: '12px', marginBottom: '8px', color: '#cbd5e1' }}>
-            👤 Seleccionar Cliente del CRM (Holding Textil Montería):
-          </label>
-          <select
-            value={clienteSeleccionado}
-            onChange={(e) => setClienteSeleccionado(e.target.value)}
-            style={{ width: '100%', backgroundColor: '#1e293b', border: '1px solid #334155', color: '#fbbf24', fontWeight: 'bold', padding: '12px', borderRadius: '10px', fontSize: '13px', outline: 'none' }}
-          >
-            {clientes.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.nombre_comercial} — NIT: {c.nit}
-              </option>
-            ))}
-          </select>
-
-          {actualCliente && (
-            <div style={{ marginTop: '12px', padding: '12px', backgroundColor: '#1e293b', borderRadius: '10px', fontSize: '11px', display: 'flex', justifyContent: 'space-between', color: '#94a3b8' }}>
-              <span>Razón Social: <strong style={{ color: '#ffffff' }}>{actualCliente.razon_social}</strong></span>
-              <span>Ciudad: <strong style={{ color: '#10b981' }}>{actualCliente.ciudad}</strong></span>
-            </div>
-          )}
-        </div>
-
-        {/* Selector Tarifario Dinámico L1-L5 */}
+        {/* Selector Tarifario L1-L5 */}
         <div style={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', padding: '20px', borderRadius: '16px' }}>
           <label style={{ display: 'block', fontWeight: '800', fontSize: '12px', marginBottom: '12px', color: '#cbd5e1' }}>
-            🔄 Lista Tarifaria Aplicada al Pedido:
+            🔄 Selector de Listas Dinámicas (Motor L1-L5):
           </label>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '10px' }}>
             {(['L1', 'L2', 'L4', 'L3'] as const).map((l) => (
@@ -209,7 +141,7 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Tabla Matriz de Productos con Ajuste de Cantidad */}
+        {/* Tabla Matriz con Switch Web */}
         <div style={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', padding: '20px', borderRadius: '16px', overflowX: 'auto' }}>
           <table style={{ width: '100%', textAlign: 'left', fontSize: '12px', borderCollapse: 'collapse' }}>
             <thead>
@@ -217,7 +149,7 @@ export default function Home() {
                 <th style={{ padding: '10px 8px' }}>REF</th>
                 <th style={{ padding: '10px 8px' }}>DESCRIPCIÓN</th>
                 <th style={{ padding: '10px 8px' }}>CURVA</th>
-                <th style={{ padding: '10px 8px', textAlign: 'center' }}>CANT. PRENDAS</th>
+                <th style={{ padding: '10px 8px', textAlign: 'center' }}>MOSTRAR EN WEBSITE</th>
                 <th style={{ padding: '10px 8px', textAlign: 'right' }}>UNITARIO ($ COP)</th>
                 <th style={{ padding: '10px 8px', textAlign: 'right' }}>SUBTOTAL ($ COP)</th>
               </tr>
@@ -225,25 +157,33 @@ export default function Home() {
             <tbody>
               {productos.map((p) => {
                 const u = getPrecio(p.precio_L1_base);
-                const cant = cantidades[p.referencia] || 0;
                 return (
                   <tr key={p.referencia} style={{ borderBottom: '1px solid #1e293b' }}>
                     <td style={{ padding: '12px 8px', fontWeight: '900', color: '#fbbf24' }}>{p.referencia}</td>
                     <td style={{ padding: '12px 8px', fontWeight: 'bold' }}>{p.descripcion}</td>
                     <td style={{ padding: '12px 8px', color: '#94a3b8' }}>{p.curva}</td>
                     <td style={{ padding: '12px 8px', textAlign: 'center' }}>
-                      <input
-                        type="number"
-                        value={cant}
-                        onChange={(e) => handleCantidadChange(p.referencia, parseInt(e.target.value) || 0)}
-                        style={{ width: '60px', backgroundColor: '#1e293b', border: '1px solid #334155', color: '#10b981', fontWeight: '900', textAlign: 'center', padding: '6px', borderRadius: '6px', outline: 'none' }}
-                      />
+                      <button
+                        onClick={() => toggleWebsite(p.referencia, p.mostrar_en_website)}
+                        style={{
+                          padding: '6px 12px',
+                          borderRadius: '8px',
+                          border: 'none',
+                          fontWeight: 'bold',
+                          fontSize: '11px',
+                          cursor: 'pointer',
+                          backgroundColor: p.mostrar_en_website ? '#064e3b' : '#881337',
+                          color: p.mostrar_en_website ? '#34d399' : '#f43f5e'
+                        }}
+                      >
+                        {p.mostrar_en_website ? '🌐 Sí (Visible B2B/B2C)' : '🔒 No (Oculto)'}
+                      </button>
                     </td>
                     <td style={{ padding: '12px 8px', textAlign: 'right', fontWeight: 'bold' }}>
                       {visibilidad === 'SIN_VALORES' ? '🔒 Oculto' : `$ ${u.toLocaleString('es-CO')}`}
                     </td>
                     <td style={{ padding: '12px 8px', textAlign: 'right', fontWeight: '900', color: '#10b981' }}>
-                      {visibilidad === 'CON_VALORES' ? `$ ${(cant * u).toLocaleString('es-CO')}` : '🔒 Oculto'}
+                      {visibilidad === 'CON_VALORES' ? `$ ${(20 * u).toLocaleString('es-CO')}` : '🔒 Oculto'}
                     </td>
                   </tr>
                 );
@@ -252,35 +192,22 @@ export default function Home() {
           </table>
         </div>
 
-        {/* Resumen Financiero & Botón de Guardado */}
-        <div style={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', padding: '20px', borderRadius: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px' }}>
-          <div>
-            <span style={{ fontSize: '10px', color: '#94a3b8', textTransform: 'uppercase', display: 'block', fontWeight: 'bold' }}>Total Calculado del Pedido:</span>
-            <div style={{ fontSize: '1.8rem', fontWeight: '900', color: '#10b981' }}>
-              {visibilidad === 'CON_VALORES' ? `$ ${subtotalCOP.toLocaleString('es-CO')} COP` : '🔒 TOTAL CONFIDENCIAL'}
-            </div>
-            <span style={{ fontSize: '12px', color: '#fbbf24', fontWeight: 'bold', display: 'block', marginTop: '4px' }}>
-              Comisión Asignada a Adrián Peña (6%): $ ${comisionCOP.toLocaleString('es-CO')} COP
-            </span>
-          </div>
-
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <button
-              onClick={guardarPedido}
-              disabled={guardando}
-              style={{
-                padding: '12px 24px',
-                borderRadius: '10px',
-                border: 'none',
-                fontWeight: '900',
-                cursor: 'pointer',
-                backgroundColor: '#10b981',
-                color: '#022c22',
-                fontSize: '13px'
-              }}
-            >
-              {guardando ? '⏳ Guardando...' : '💾 Confirmar & Guardar Pedido'}
-            </button>
+        {/* Visor de Auditoría Inmutable (Audit Log) */}
+        <div style={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', padding: '20px', borderRadius: '16px' }}>
+          <h3 style={{ fontSize: '12px', fontWeight: '900', color: '#fbbf24', margin: '0 0 12px 0', textTransform: 'uppercase' }}>
+            📜 Últimos Registros en Audit Log (PostgreSQL Inmutable)
+          </h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {logs.length === 0 ? (
+              <span style={{ fontSize: '11px', color: '#94a3b8' }}>No hay registros de auditoría aún.</span>
+            ) : (
+              logs.map((l, i) => (
+                <div key={i} style={{ backgroundColor: '#1e293b', padding: '10px', borderRadius: '8px', fontSize: '11px', display: 'flex', justifyContent: 'space-between', color: '#cbd5e1' }}>
+                  <span><strong>{l.usuario_nombre}</strong> ejecutó <strong style={{ color: '#10b981' }}>{l.accion}</strong> en {l.entidad_afectada} ({l.entidad_id})</span>
+                  <span style={{ color: '#94a3b8', fontSize: '10px' }}>{new Date(l.fecha_hora).toLocaleTimeString()}</span>
+                </div>
+              ))
+            )}
           </div>
         </div>
 
