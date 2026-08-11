@@ -57,7 +57,7 @@ export default function Home() {
   const [carrito, setCarrito] = useState<{ [key: string]: number }>({});
   const [mensaje, setMensaje] = useState('');
 
-  // Llave Pública Productiva Real de Wompi
+  // Llave Pública Productiva Real de Wompi Colombia
   const wompiPublicKey = 'pub_prod_nNuIXKqeLhROFF29YF7UIVBMItu6ryaN';
 
   const [productos, setProductos] = useState<Producto[]>([
@@ -73,12 +73,6 @@ export default function Home() {
       if (data && data.length > 0) setProductos(data);
     }
     cargar();
-
-    // Script Oficial de Wompi Widget
-    const script = document.createElement('script');
-    script.src = 'https://checkout.wompi.co/widget.js';
-    script.async = true;
-    document.body.appendChild(script);
   }, []);
 
   const getPrecioTienda = (p: Producto) => {
@@ -103,8 +97,8 @@ export default function Home() {
     setMensaje(`🎉 Tarifa L1 Mayorista activada para NIT: ${nitMayorista}`);
   };
 
-  // Abrir Checkout de Producción Wompi
-  const abrirWompiProduccion = () => {
+  // Redirección Directa a Checkout Oficial Wompi Colombia (Sin Incompatibilidades de Widget)
+  const pagarConWompiDirecto = async () => {
     if (totalPagarCOP === 0) {
       setMensaje('⚠️ El carrito está vacío.');
       return;
@@ -113,37 +107,22 @@ export default function Home() {
     const referenciaWompi = `PED-${Date.now()}`;
     const valorEnCentavos = totalPagarCOP * 100;
 
-    // @ts-ignore
-    if (typeof WidgetCheckout !== 'undefined') {
-      // @ts-ignore
-      const checkout = new WidgetCheckout({
-        currency: 'COP',
-        amountInCents: valorEnCentavos,
-        reference: referenciaWompi,
-        publicKey: wompiPublicKey,
-        redirectUrl: 'https://pequix-erp-core.vercel.app'
-      });
+    // Registrar Pedido Inicial en Estado Pendiente en PostgreSQL
+    await supabase.from('pedidos').insert([{
+      tenant_id: 'EMP-0001',
+      codigo_pedido: referenciaWompi,
+      vendedor_nombre: esMayorista ? `Mayorista (${nitMayorista})` : 'Cliente Web B2C',
+      lista_aplicada: esMayorista ? 'L1_MAYORISTA' : 'L3_DETAL',
+      total_prendas: totalUnidadesCarrito,
+      subtotal_cop: totalPagarCOP,
+      estado: 'PENDIENTE_PAGO_WOMPI'
+    }]);
 
-      checkout.open(async (result: any) => {
-        const transaction = result.transaction;
-        if (transaction && transaction.status === 'APPROVED') {
-          await supabase.from('pedidos').insert([{
-            tenant_id: 'EMP-0001',
-            codigo_pedido: referenciaWompi,
-            vendedor_nombre: esMayorista ? `Mayorista (${nitMayorista})` : 'Cliente Web B2C',
-            lista_aplicada: esMayorista ? 'L1_MAYORISTA' : 'L3_DETAL',
-            total_prendas: totalUnidadesCarrito,
-            subtotal_cop: totalPagarCOP,
-            estado: 'PAGADO_PRODUCCION_WOMPI'
-          }]);
+    // Construcción de la URL de Pasarela Oficial Directa
+    const urlCheckoutWompi = `https://checkout.wompi.co/p/?public-key=${wompiPublicKey}&currency=COP&amount-in-cents=${valorEnCentavos}&reference=${referenciaWompi}&redirect-url=https://pequix-erp-core.vercel.app`;
 
-          setMensaje(`✅ ¡Pago REAL APROBADO con Wompi por $ ${totalPagarCOP.toLocaleString('es-CO')} COP! Orden: ${referenciaWompi}`);
-          setCarrito({});
-        }
-      });
-    } else {
-      setMensaje('⏳ Cargando pasarela Wompi... Intenta de nuevo en un segundo.');
-    }
+    // Abrir la pasarela directa en una ventana segura
+    window.location.href = urlCheckoutWompi;
   };
 
   return (
@@ -242,7 +221,7 @@ export default function Home() {
           </div>
 
           <button
-            onClick={abrirWompiProduccion}
+            onClick={pagarConWompiDirecto}
             disabled={totalUnidadesCarrito === 0}
             style={{
               padding: '14px 28px',
