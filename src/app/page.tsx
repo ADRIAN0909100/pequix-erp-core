@@ -57,8 +57,8 @@ export default function Home() {
   const [carrito, setCarrito] = useState<{ [key: string]: number }>({});
   const [mensaje, setMensaje] = useState('');
 
-  // Llave de Pruebas Sandbox de Wompi (Garantiza Apertura del Widget Sin Errores de Firma)
-  const wompiPublicKey = 'pub_test_fzAkLbIGuxBlTeFo5jtiumOHtbtRt1JY'; 
+  // Llave Pública Productiva Real de Wompi Colombia (Dinero Real $ COP)
+  const wompiPublicKey = process.env.NEXT_PUBLIC_WOMPI_PUBLIC_KEY || 'pub_prod_nNuIXKqeLhROFF29YF7UIVBMItu6ryaN'; 
 
   const [productos, setProductos] = useState<Producto[]>([
     { referencia: '745', descripcion: 'CONJUNTO BEBE DORMILON', curva: 'BEBÉS', precio_L1_base: 59900, mostrar_en_website: true },
@@ -103,8 +103,8 @@ export default function Home() {
     setMensaje(`🎉 Tarifa L1 Mayorista activada para NIT: ${nitMayorista}`);
   };
 
-  // Abrir Modal de Wompi Widget Funcional
-  const abrirWompiReal = () => {
+  // Abrir Modal Oficial de Wompi en Modo Producción
+  const abrirWompiProduccion = () => {
     if (totalPagarCOP === 0) {
       setMensaje('⚠️ El carrito está vacío.');
       return;
@@ -120,7 +120,8 @@ export default function Home() {
         currency: 'COP',
         amountInCents: valorEnCentavos,
         reference: referenciaWompi,
-        publicKey: wompiPublicKey
+        publicKey: wompiPublicKey,
+        redirectUrl: 'https://pequix-erp-core.vercel.app'
       });
 
       checkout.open(async (result: any) => {
@@ -133,10 +134,10 @@ export default function Home() {
             lista_aplicada: esMayorista ? 'L1_MAYORISTA' : 'L3_DETAL',
             total_prendas: totalUnidadesCarrito,
             subtotal_cop: totalPagarCOP,
-            estado: 'APROBADO_WOMPI'
+            estado: 'PAGADO_PRODUCCION_WOMPI'
           }]);
 
-          setMensaje(`✅ ¡Pago APROBADO con Wompi por $ ${totalPagarCOP.toLocaleString('es-CO')} COP! Orden: ${referenciaWompi}`);
+          setMensaje(`✅ ¡Pago REAL APROBADO con Wompi por $ ${totalPagarCOP.toLocaleString('es-CO')} COP! Orden: ${referenciaWompi}`);
           setCarrito({});
         }
       });
@@ -157,7 +158,7 @@ export default function Home() {
             </span>
             <h1 style={{ fontSize: '1.4rem', fontWeight: '900', margin: '8px 0 0 0', color: '#ffffff' }}>Colección Infantil Confección Colombiana</h1>
             <p style={{ margin: '4px 0 0 0', color: '#94a3b8', fontSize: '12px' }}>
-              Pasarela Oficial Integrada con <strong style={{ color: '#fbbf24' }}>Wompi Colombia ($ COP)</strong>
+              Pasarela en <strong style={{ color: '#10b981' }}>Producción Oficial Wompi Colombia ($ COP)</strong>
             </p>
           </div>
 
@@ -231,7 +232,7 @@ export default function Home() {
           })}
         </div>
 
-        {/* Resumen Financiero & Wompi Real */}
+        {/* Resumen Financiero & Wompi Producción */}
         <div style={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', padding: '20px', borderRadius: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px' }}>
           <div>
             <span style={{ fontSize: '10px', color: '#94a3b8', textTransform: 'uppercase', display: 'block', fontWeight: 'bold' }}>Total a Pagar por Pasarela Wompi:</span>
@@ -241,7 +242,7 @@ export default function Home() {
           </div>
 
           <button
-            onClick={abrirWompiReal}
+            onClick={abrirWompiProduccion}
             disabled={totalUnidadesCarrito === 0}
             style={{
               padding: '14px 28px',
@@ -254,7 +255,7 @@ export default function Home() {
               fontSize: '13px'
             }}
           >
-            💳 Pagar con Wompi (Nequi / PSE / Tarjeta)
+            💳 Pagar con Wompi (Producción $ COP)
           </button>
         </div>
 
