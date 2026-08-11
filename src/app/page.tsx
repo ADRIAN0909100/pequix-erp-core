@@ -55,7 +55,6 @@ interface Cliente {
   razon_social: string;
   nombre_comercial: string;
   ciudad: string;
-  telefono?: string;
 }
 
 export default function Home() {
@@ -86,9 +85,9 @@ export default function Home() {
         setClienteSeleccionado(data[0].id);
       } else {
         const respaldo = [
-          { id: '1', nit: '901164484-3', razon_social: 'Comercializadora Palacio S.A.S', nombre_comercial: 'El Palacio de la Pantaleta #1 Montería', ciudad: 'Montería', telefono: '573000000000' },
-          { id: '2', nit: '900314739-7', razon_social: 'Tendencias Futuristas S.A.S', nombre_comercial: 'La Media Naranja Montería', ciudad: 'Montería', telefono: '573000000000' },
-          { id: '3', nit: '900050852-7', razon_social: 'Inversiones La Pantaleta S.A.S', nombre_comercial: 'El Palacio de la Pantaleta #3 Montería', ciudad: 'Montería', telefono: '573000000000' }
+          { id: '1', nit: '901164484-3', razon_social: 'Comercializadora Palacio S.A.S', nombre_comercial: 'El Palacio de la Pantaleta #1 Montería', ciudad: 'Montería' },
+          { id: '2', nit: '900314739-7', razon_social: 'Tendencias Futuristas S.A.S', nombre_comercial: 'La Media Naranja Montería', ciudad: 'Montería' },
+          { id: '3', nit: '900050852-7', razon_social: 'Inversiones La Pantaleta S.A.S', nombre_comercial: 'El Palacio de la Pantaleta #3 Montería', ciudad: 'Montería' }
         ];
         setClientes(respaldo);
         setClienteSeleccionado('1');
@@ -165,22 +164,25 @@ export default function Home() {
     }
   };
 
-  // Exportar / Imprimir PDF
+  // Generar Impresión PDF
   const exportarPDF = () => {
     window.print();
   };
 
-  // Enviar Notificación por WhatsApp
-  const enviarWhatsApp = () => {
+  // Enviar WhatsApp con Enlace Directo a Descarga de PDF
+  const enviarWhatsAppConPDF = () => {
+    const urlDocumento = `https://pequix-erp-core.vercel.app/?order=${ultimoCodigo}&export=pdf`;
+    
     const texto = `*PEQUIX ERP · COMPROBANTE DE PEDIDO FORMAL*%0A%0A` +
-      `*Orden:* ${ultimoCodigo}%0A` +
-      `*Cliente:* ${actualCliente?.nombre_comercial}%0A` +
-      `*NIT:* ${actualCliente?.nit}%0A` +
-      `*Asesor:* Adrián Peña (FJ Kids)%0A` +
-      `*Lista Aplicada:* ${lista}%0A` +
-      `*Total Prendas:* ${totalPrendas} unds%0A` +
-      `*Total Pedido:* $ ${subtotalCOP.toLocaleString('es-CO')} COP%0A%0A` +
-      `_Generado desde Pequix ERP SaaS (EMP-0001 / FJ Kids)_ 🚀`;
+      `📌 *Orden:* ${ultimoCodigo}%0A` +
+      `🏢 *Cliente:* ${actualCliente?.nombre_comercial}%0A` +
+      `🆔 *NIT:* ${actualCliente?.nit}%0A` +
+      `👤 *Asesor Comercial:* Adrián Peña (FJ Kids)%0A` +
+      `📋 *Lista Aplicada:* ${lista}%0A` +
+      `📦 *Total Prendas:* ${totalPrendas} unds%0A` +
+      `💰 *Total Pedido:* $ ${subtotalCOP.toLocaleString('es-CO')} COP%0A%0A` +
+      `📄 *Descargar PDF Oficial del Pedido:*%0A${urlDocumento}%0A%0A` +
+      `_Generado automáticamente desde Pequix ERP SaaS (EMP-0001 / FJ Kids)_ 🚀`;
 
     window.open(`https://api.whatsapp.com/send?text=${texto}`, '_blank');
   };
@@ -193,9 +195,9 @@ export default function Home() {
         <div style={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', padding: '20px', borderRadius: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
           <div>
             <span style={{ backgroundColor: '#10b981', color: '#022c22', fontWeight: '900', fontSize: '11px', padding: '4px 10px', borderRadius: '6px', textTransform: 'uppercase' }}>
-              🟢 MÓDULO 1: PEDIDOS & EXPORTACIÓN
+              🟢 PEQUIX ERP CORE · EXPORTACIÓN PDF & WHATSAPP
             </span>
-            <h1 style={{ fontSize: '1.4rem', fontWeight: '900', margin: '8px 0 0 0', color: '#ffffff' }}>Toma de Pedidos & Cierre B2B</h1>
+            <h1 style={{ fontSize: '1.4rem', fontWeight: '900', margin: '8px 0 0 0', color: '#ffffff' }}>Cierre de Pedidos B2B & Envío PDF</h1>
             <p style={{ margin: '4px 0 0 0', color: '#94a3b8', fontSize: '12px' }}>
               Asesor Comercial: <strong style={{ color: '#fbbf24' }}>Adrián Peña (USR-0001 / V2)</strong> — Tenant: EMP-0001 (FJ Kids)
             </p>
@@ -206,7 +208,6 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Notificación de Éxito */}
         {mensaje && (
           <div style={{ backgroundColor: '#064e3b', border: '1px solid #10b981', color: '#6ee7b7', padding: '14px', borderRadius: '12px', fontWeight: 'bold', fontSize: '13px', textAlign: 'center' }}>
             {mensaje}
@@ -354,11 +355,11 @@ export default function Home() {
                 fontSize: '12px'
               }}
             >
-              📄 Generar PDF
+              📄 Guardar PDF
             </button>
 
             <button
-              onClick={enviarWhatsApp}
+              onClick={enviarWhatsAppConPDF}
               style={{
                 padding: '12px 18px',
                 borderRadius: '10px',
@@ -370,7 +371,7 @@ export default function Home() {
                 fontSize: '12px'
               }}
             >
-              📲 Enviar WhatsApp
+              📲 WhatsApp + Enlace PDF
             </button>
           </div>
         </div>
