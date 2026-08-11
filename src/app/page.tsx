@@ -3,7 +3,6 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 
 interface Producto {
-  id?: string;
   referencia: string;
   descripcion: string;
   curva: string;
@@ -23,7 +22,6 @@ export default function Home() {
   const deltaL2 = 1000;
   const deltaL4 = -2000;
 
-  // Cargar Productos y Logs desde Supabase PostgreSQL
   const cargarDatos = async () => {
     try {
       setCargando(true);
@@ -59,12 +57,11 @@ export default function Home() {
     return base;
   };
 
-  // Switch de Visibilidad Web (B2B / B2C) con Registro de Auditoría Inmutable
+  // Switch B2B/B2C con Registro de Auditoría Inmutable
   const toggleWebsite = async (ref: string, estadoActual: boolean) => {
     const nuevoEstado = !estadoActual;
     setProductos(prev => prev.map(p => p.referencia === ref ? { ...p, mostrar_en_website: nuevoEstado } : p));
 
-    // Guardar Traza en Audit Log
     await supabase.from('audit_logs').insert([
       {
         tenant_id: 'EMP-0001',
