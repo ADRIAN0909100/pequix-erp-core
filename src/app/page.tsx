@@ -42,216 +42,380 @@ const supabase = {
   })
 };
 
-interface ItemPedidoPDF {
+interface FilaPedido {
+  id: number;
   referencia: string;
   descripcion: string;
-  curva: string;
-  cantidad: number;
-  precioUnitarioL1: number;
+  curva: 'MESES' | 'BEBÉS' | 'JUNIOR' | 'JUVENIL';
+  tallas: { [key: string]: number };
+  precioUnitario: number;
+  colores: { nombre: string; bg: string; text: string }[];
+  imagenUrl?: string;
 }
 
 export default function Home() {
-  const [pestana, setPestana] = useState<'EXPORTAR_PDF' | 'DASHBOARD' | 'BODEGA' | 'INVENTARIO'>('EXPORTAR_PDF');
+  const [pestana, setPestana] = useState<'NUEVO_PEDIDO' | 'DASHBOARD' | 'PDF'>('NUEVO_PEDIDO');
+  const [listaSeleccionada, setListaSeleccionada] = useState<'L1' | 'L2' | 'L3' | 'L4' | 'L5'>('L1');
   const [mensaje, setMensaje] = useState('');
+  const [modalFoto, setModalFoto] = useState<FilaPedido | null>(null);
 
-  // Datos del Pedido B2B Modelo
-  const codigoPedido = 'PED-2026-9081';
-  const clienteNombre = 'El Palacio de la Pantaleta #1';
-  const nitCliente = '900.123.456-7';
-  const ciudadDestino = 'Montería, Córdoba';
-  const vendedorNombre = 'Adrián Peña (USR-0001)';
-  const fechaEmision = '11/08/2026';
+  // Formulario Pedido
+  const [clienteNombre, setClienteNombre] = useState('');
+  const [nitCliente, setNitCliente] = useState('');
+  const [ciudad, setCiudad] = useState('');
+  const [vendedor, setVendedor] = useState('Adrián Peña (USR-0001)');
 
-  const [itemsPedido] = useState<ItemPedidoPDF[]>([
-    { referencia: '745', descripcion: 'CONJUNTO BEBE DORMILON', curva: 'BEBÉS', cantidad: 20, precioUnitarioL1: 59900 },
-    { referencia: '8182', descripcion: 'CONJUNTO BEBE PREMIUM', curva: 'BEBÉS', cantidad: 15, precioUnitarioL1: 70900 },
-    { referencia: '2552', descripcion: 'CONJUNTO JUNIOR BASICO', curva: 'JUNIOR', cantidad: 25, precioUnitarioL1: 43900 },
-    { referencia: '1989', descripcion: 'OVEROL BEBE ESPECIAL', curva: 'MESES', cantidad: 10, precioUnitarioL1: 65000 }
+  // Filas del Pedido B2B
+  const [filas, setFilas] = useState<FilaPedido[]>([
+    {
+      id: 1,
+      referencia: '2553',
+      descripcion: 'CONJUNTO JUNIOR BASICO T16',
+      curva: 'JUNIOR',
+      tallas: { '4': 2, '6': 3, '8': 4, '10': 2, '12': 1, '14': 0, '16': 0 },
+      precioUnitario: 43900,
+      colores: [
+        { nombre: 'ROJO', bg: '#dc2626', text: '#ffffff' },
+        { nombre: 'AZUL CLARO', bg: '#38bdf8', text: '#0f172a' },
+        { nombre: 'GRIS JASPEADO', bg: '#e2e8f0', text: '#0f172a' }
+      ],
+      imagenUrl: 'https://images.unsplash.com/photo-1622290291468-a28f7a7dc6a8?w=500&q=80'
+    },
+    {
+      id: 2,
+      referencia: '745',
+      descripcion: 'CONJUNTO BEBE DORMILON',
+      curva: 'BEBÉS',
+      tallas: { '2': 4, '3': 5, '4': 6, '5': 3, '6': 2 },
+      precioUnitario: 59900,
+      colores: [
+        { nombre: 'AMARILLO', bg: '#facc15', text: '#451a03' },
+        { nombre: 'AZUL', bg: '#2563eb', text: '#ffffff' }
+      ],
+      imagenUrl: 'https://images.unsplash.com/photo-1519238263530-99bdd11df2ea?w=500&q=80'
+    }
   ]);
 
-  // Cálculos Financieros $ COP
-  const totalPrendas = itemsPedido.reduce((acc, item) => acc + item.cantidad, 0);
-  const subtotalCOP = itemsPedido.reduce((acc, item) => acc + (item.cantidad * item.precioUnitarioL1), 0);
-  const comisionAsesor6 = subtotalCOP * 0.06;
+  const cambiarTalla = (filaId: number, tallaKey: string, valor: number) => {
+    setFilas(prev =>
+      prev.map(f => {
+        if (f.id === filaId) {
+          return {
+            ...f,
+            tallas: { ...f.tallas, [tallaKey]: Math.max(0, valor) }
+          };
+        }
+        return f;
+      })
+    );
+  };
 
-  // Función para Imprimir / Exportar a PDF
-  const generarPDFImpresion = async () => {
-    window.print();
+  const calcularTotalPrendasFila = (f: FilaPedido) => {
+    return Object.values(f.tallas).reduce((a, b) => a + (b || 0), 0);
+  };
 
-    // Auditoría Inmutable en Supabase
+  const calcularTotalFilas = () => {
+    return filas.reduce((acc, f) => acc + (calcularTotalPrendasFila(f) * f.precioUnitario), 0);
+  };
+
+  const calcularTotalPrendasGeneral = () => {
+    return filas.reduce((acc, f) => acc + calcularTotalPrendasFila(f), 0);
+  };
+
+  // Guardar Pedido en PostgreSQL
+  const guardarPedido = async () => {
+    const totalCOP = calcularTotalFilas();
+    const prendas = calcularTotalPrendasGeneral();
+    const codigo = `PED-${Date.now()}`;
+
+    await supabase.from('pedidos').insert([{
+      tenant_id: 'EMP-0001',
+      codigo_pedido: codigo,
+      vendedor_nombre: vendedor,
+      lista_aplicada: listaSeleccionada,
+      total_prendas: prendas,
+      subtotal_cop: totalCOP,
+      estado: 'GUARDADO_B2B'
+    }]);
+
+    // Registrar en Audit Log
     await supabase.from('audit_logs').insert([{
       tenant_id: 'EMP-0001',
       usuario_id: 'USR-0001',
       usuario_nombre: 'Adrián Peña',
-      accion: 'EXPORTAR_PDF_PEDIDO',
-      entidad_afectada: 'PEDIDOS_PDF',
-      entidad_id: codigoPedido,
-      valor_nuevo: { cliente: clienteNombre, total_cop: subtotalCOP, prendas: totalPrendas }
+      accion: 'CREAR_PEDIDO_B2B_MATRIZ',
+      entidad_afectada: 'PEDIDOS',
+      entidad_id: codigo,
+      valor_nuevo: { cliente: clienteNombre, total_cop: totalCOP, prendas: prendas }
     }]);
 
-    setMensaje(`📄 Documento PDF ${codigoPedido}_${clienteNombre.replace(/\s+/g, '_')}.pdf exportado y registrado en Audit Log.`);
+    setMensaje(`🎉 ¡Pedido ${codigo} guardado exitosamente por $ ${totalCOP.toLocaleString('es-CO')} COP (${prendas} prendas)!`);
   };
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#090d16', color: '#f8fafc', padding: '20px', fontFamily: 'sans-serif' }}>
-      <div style={{ maxWidth: '950px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: '#090d16', color: '#f8fafc', padding: '15px', fontFamily: 'sans-serif' }}>
+      <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '15px' }}>
         
-        {/* Header Tenant FJ Kids (No Imprimible) */}
-        <div className="no-print" style={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', padding: '20px', borderRadius: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+        {/* Header Superior con Navegación de Pestañas */}
+        <div style={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', padding: '15px 20px', borderRadius: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
           <div>
-            <span style={{ backgroundColor: '#a855f7', color: '#ffffff', fontWeight: '900', fontSize: '11px', padding: '4px 10px', borderRadius: '6px', textTransform: 'uppercase' }}>
-              📄 PEQUIX ERP CORE · GENERADOR DE DOCUMENTOS B2B
+            <span style={{ backgroundColor: '#10b981', color: '#022c22', fontWeight: '900', fontSize: '10px', padding: '3px 8px', borderRadius: '4px', textTransform: 'uppercase' }}>
+              🟢 PEQUIX ERP CORE SAAS · FJ KIDS S.A.S
             </span>
-            <h1 style={{ fontSize: '1.4rem', fontWeight: '900', margin: '8px 0 0 0', color: '#ffffff' }}>Plantilla de Impresión & Exportador PDF</h1>
-            <p style={{ margin: '4px 0 0 0', color: '#94a3b8', fontSize: '12px' }}>
-              Usuario: <strong style={{ color: '#fbbf24' }}>Adrián Peña (USR-0001)</strong> — EMP-0001 (FJ Kids)
-            </p>
+            <h1 style={{ fontSize: '1.2rem', fontWeight: '900', margin: '4px 0 0 0', color: '#ffffff' }}>Módulo B2B Toma de Pedidos por Matriz de Tallas</h1>
           </div>
 
-          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-            <button onClick={() => setPestana('EXPORTAR_PDF')} style={{ padding: '8px 12px', borderRadius: '8px', border: 'none', fontWeight: 'bold', fontSize: '11px', cursor: 'pointer', backgroundColor: pestana === 'EXPORTAR_PDF' ? '#a855f7' : '#1e293b', color: '#ffffff' }}>
-              📄 Vista PDF
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button onClick={() => setPestana('NUEVO_PEDIDO')} style={{ padding: '8px 14px', borderRadius: '8px', border: 'none', fontWeight: 'bold', fontSize: '11px', cursor: 'pointer', backgroundColor: pestana === 'NUEVO_PEDIDO' ? '#10b981' : '#1e293b', color: pestana === 'NUEVO_PEDIDO' ? '#022c22' : '#ffffff' }}>
+              📋 Nuevo Pedido
             </button>
-            <button onClick={() => setPestana('DASHBOARD')} style={{ padding: '8px 12px', borderRadius: '8px', border: 'none', fontWeight: 'bold', fontSize: '11px', cursor: 'pointer', backgroundColor: pestana === 'DASHBOARD' ? '#fbbf24' : '#1e293b', color: pestana === 'DASHBOARD' ? '#451a03' : '#ffffff' }}>
+            <button onClick={() => setPestana('DASHBOARD')} style={{ padding: '8px 14px', borderRadius: '8px', border: 'none', fontWeight: 'bold', fontSize: '11px', cursor: 'pointer', backgroundColor: pestana === 'DASHBOARD' ? '#fbbf24' : '#1e293b', color: pestana === 'DASHBOARD' ? '#451a03' : '#ffffff' }}>
               📊 Dashboard
-            </button>
-            <button onClick={() => setPestana('BODEGA')} style={{ padding: '8px 12px', borderRadius: '8px', border: 'none', fontWeight: 'bold', fontSize: '11px', cursor: 'pointer', backgroundColor: pestana === 'BODEGA' ? '#38bdf8' : '#1e293b', color: pestana === 'BODEGA' ? '#0f172a' : '#ffffff' }}>
-              📦 Bodega
             </button>
           </div>
         </div>
 
         {mensaje && (
-          <div className="no-print" style={{ backgroundColor: '#064e3b', border: '1px solid #10b981', color: '#6ee7b7', padding: '14px', borderRadius: '12px', fontWeight: 'bold', fontSize: '13px', textAlign: 'center' }}>
+          <div style={{ backgroundColor: '#064e3b', border: '1px solid #10b981', color: '#6ee7b7', padding: '12px', borderRadius: '10px', fontWeight: 'bold', fontSize: '12px', textAlign: 'center' }}>
             {mensaje}
           </div>
         )}
 
-        {/* PESTAÑA: VISTA DOCUMENTO PDF PROFESIONAL */}
-        {pestana === 'EXPORTAR_PDF' && (
+        {/* PESTAÑA PRINCIPAL: NUEVO PEDIDO MATRIZ */}
+        {pestana === 'NUEVO_PEDIDO' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
             
-            {/* Botón Acción Descargar PDF (No Imprimible) */}
-            <div className="no-print" style={{ display: 'flex', justifyContent: 'flex-end' }}>
-              <button
-                onClick={generarPDFImpresion}
-                style={{ padding: '12px 24px', backgroundColor: '#10b981', color: '#022c22', border: 'none', borderRadius: '10px', fontWeight: '900', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
-              >
-                🖨️ Imprimir / Guardar como PDF (`{codigoPedido}_Palacio.pdf`)
+            {/* 1. Botones de Listas de Precios y Guardado */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '8px' }}>
+              <button onClick={() => setListaSeleccionada('L1')} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #334155', backgroundColor: listaSeleccionada === 'L1' ? '#1e3a8a' : '#0f172a', color: '#38bdf8', fontWeight: '900', fontSize: '11px', cursor: 'pointer' }}>
+                L1 · MAYORISTA
+              </button>
+              <button onClick={() => setListaSeleccionada('L2')} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #334155', backgroundColor: listaSeleccionada === 'L2' ? '#1e3a8a' : '#0f172a', color: '#cbd5e1', fontWeight: 'bold', fontSize: '11px', cursor: 'pointer' }}>
+                L2 · DISTRIBUIDOR
+              </button>
+              <button onClick={() => setListaSeleccionada('L3')} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #334155', backgroundColor: listaSeleccionada === 'L3' ? '#1e3a8a' : '#0f172a', color: '#cbd5e1', fontWeight: 'bold', fontSize: '11px', cursor: 'pointer' }}>
+                L3 · CLIENTE
+              </button>
+              <button onClick={() => setListaSeleccionada('L4')} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #334155', backgroundColor: listaSeleccionada === 'L4' ? '#1e3a8a' : '#0f172a', color: '#cbd5e1', fontWeight: 'bold', fontSize: '11px', cursor: 'pointer' }}>
+                L4 · CLIENTE FINAL
+              </button>
+              <button onClick={guardarPedido} style={{ padding: '10px', borderRadius: '8px', border: 'none', backgroundColor: '#10b981', color: '#022c22', fontWeight: '900', fontSize: '11px', cursor: 'pointer' }}>
+                💾 GUARDAR PEDIDO
               </button>
             </div>
 
-            {/* HOJA DE DOCUMENTO OFICIAL B2B (FORMATO DE IMPRESIÓN) */}
-            <div style={{ backgroundColor: '#ffffff', color: '#0f172a', padding: '35px', borderRadius: '16px', border: '1px solid #cbd5e1', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.3)' }}>
-              
-              {/* Encabezado de la Factura / Pedido */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '2px solid #0f172a', paddingBottom: '20px', marginBottom: '20px' }}>
+            {/* 2. Ficha Encabezado Institucional FJ KIDS S.A.S */}
+            <div style={{ backgroundColor: '#ffffff', color: '#0f172a', border: '2px solid #0f172a', borderRadius: '12px', padding: '15px', display: 'grid', gridTemplateColumns: '1.2fr 2fr 1fr', gap: '15px', alignItems: 'center' }}>
+              <div style={{ textAlign: 'center', borderRight: '1px solid #cbd5e1', paddingRight: '10px' }}>
+                <h2 style={{ fontSize: '1.4rem', fontWeight: '900', margin: 0, color: '#0f172a' }}>FJ KIDS S.A.S</h2>
+                <p style={{ margin: '2px 0 0 0', fontSize: '10px', color: '#475569', fontWeight: 'bold' }}>
+                  NIT. 900.410.656-5<br />
+                  Calle 71 #52a-77 · Barrio Santa María<br />
+                  Tel: 3226930798 / 3128920808<br />
+                  ITAGÜÍ - COLOMBIA
+                </p>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '11px' }}>
                 <div>
-                  <h1 style={{ fontSize: '1.8rem', fontWeight: '900', margin: 0, color: '#0f172a' }}>FJ KIDS CONFECCIONES</h1>
-                  <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#475569' }}>
-                    Confección Infantil & Comercialización Mayorista B2B<br />
-                    Medellín, Antioquia — Colombia · NIT: 900.887.654-3
-                  </p>
+                  <label style={{ display: 'block', fontSize: '9px', fontWeight: 'bold', color: '#64748b' }}>SEÑOR(ES):</label>
+                  <input placeholder="Buscar cliente..." value={clienteNombre} onChange={e => setClienteNombre(e.target.value)} style={{ width: '100%', padding: '4px 6px', borderRadius: '4px', border: '1px solid #cbd5e1', fontWeight: 'bold' }} />
                 </div>
-                <div style={{ textAlign: 'right' }}>
-                  <span style={{ backgroundColor: '#0f172a', color: '#ffffff', padding: '6px 12px', borderRadius: '6px', fontWeight: '900', fontSize: '12px' }}>
-                    ORDEN B2B: {codigoPedido}
-                  </span>
-                  <p style={{ margin: '8px 0 0 0', fontSize: '11px', color: '#475569' }}>
-                    Fecha Emisión: <strong>{fechaEmision}</strong><br />
-                    Asesor Comercial: <strong>{vendedorNombre}</strong>
-                  </p>
+                <div>
+                  <label style={{ display: 'block', fontSize: '9px', fontWeight: 'bold', color: '#64748b' }}>NIT o C.C.:</label>
+                  <input placeholder="NIT o Cédula..." value={nitCliente} onChange={e => setNitCliente(e.target.value)} style={{ width: '100%', padding: '4px 6px', borderRadius: '4px', border: '1px solid #cbd5e1' }} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '9px', fontWeight: 'bold', color: '#64748b' }}>CIUDAD / MUNICIPIO:</label>
+                  <input placeholder="Ej. Montería" value={ciudad} onChange={e => setCiudad(e.target.value)} style={{ width: '100%', padding: '4px 6px', borderRadius: '4px', border: '1px solid #cbd5e1' }} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '9px', fontWeight: 'bold', color: '#64748b' }}>FORMA DE PAGO:</label>
+                  <select style={{ width: '100%', padding: '4px 6px', borderRadius: '4px', border: '1px solid #cbd5e1', fontWeight: 'bold' }}>
+                    <option>CONTADO / TRANSFERENCIA</option>
+                    <option>CREDITO 30 DIAS</option>
+                  </select>
                 </div>
               </div>
 
-              {/* Datos del Cliente Mayorista */}
-              <div style={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '15px', marginBottom: '20px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '12px' }}>
-                <div>
-                  <span style={{ color: '#64748b', fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase' }}>Cliente Mayorista / Empresa:</span>
-                  <p style={{ margin: '2px 0 0 0', fontWeight: '900', fontSize: '14px', color: '#0f172a' }}>{clienteNombre}</p>
-                  <p style={{ margin: '2px 0 0 0', color: '#475569' }}>NIT / Cédula: {nitCliente}</p>
-                </div>
-                <div>
-                  <span style={{ color: '#64748b', fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase' }}>Destino de Despacho:</span>
-                  <p style={{ margin: '2px 0 0 0', fontWeight: 'bold', color: '#0f172a' }}>{ciudadDestino}</p>
-                  <p style={{ margin: '2px 0 0 0', color: '#475569' }}>Lista Aplicada: <strong style={{ color: '#059669' }}>L1 (Precio Mayorista Base)</strong></p>
-                </div>
+              <div style={{ textAlign: 'center', backgroundColor: '#f8fafc', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                <span style={{ fontSize: '10px', fontWeight: '900', color: '#64748b', textTransform: 'uppercase' }}>PEDIDO N°</span>
+                <h3 style={{ fontSize: '1.2rem', fontWeight: '900', margin: '4px 0 0 0', color: '#dc2626' }}>PED-2026-8890</h3>
+                <span style={{ fontSize: '9px', color: '#059669', fontWeight: 'bold' }}>09:05:36 p. m. (Bogotá)</span>
               </div>
+            </div>
 
-              {/* Tabla de Productos por Curva */}
-              <table style={{ width: '100%', textAlign: 'left', fontSize: '12px', borderCollapse: 'collapse', marginBottom: '20px' }}>
+            {/* 3. Barra de Búsqueda y Escáner */}
+            <div style={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', padding: '10px', borderRadius: '10px', display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <span style={{ fontSize: '16px' }}>🔦</span>
+              <input
+                placeholder="Toca aquí y escanea o escribe la referencia..."
+                style={{ flex: 1, backgroundColor: '#1e293b', border: '1px solid #334155', color: '#ffffff', padding: '8px 12px', borderRadius: '6px', fontSize: '12px', outline: 'none' }}
+              />
+            </div>
+
+            {/* 4. Matriz de Pedidos por Curvas y Tallas */}
+            <div style={{ backgroundColor: '#ffffff', color: '#0f172a', border: '2px solid #0f172a', borderRadius: '12px', overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px', textAlign: 'center' }}>
                 <thead>
-                  <tr style={{ backgroundColor: '#0f172a', color: '#ffffff' }}>
-                    <th style={{ padding: '10px' }}>REF</th>
-                    <th style={{ padding: '10px' }}>DESCRIPCIÓN DE LA PRENDA</th>
-                    <th style={{ padding: '10px' }}>CURVA</th>
-                    <th style={{ padding: '10px', textAlign: 'center' }}>CANTIDAD</th>
-                    <th style={{ padding: '10px', textAlign: 'right' }}>VALOR UNIT (L1)</th>
-                    <th style={{ padding: '10px', textAlign: 'right' }}>SUBTOTAL ($ COP)</th>
+                  {/* Fila Encabezados Curvas */}
+                  <tr style={{ backgroundColor: '#f1f5f9', borderBottom: '1px solid #cbd5e1', fontWeight: '900' }}>
+                    <th style={{ padding: '8px', borderRight: '1px solid #cbd5e1' }}>N°</th>
+                    <th style={{ padding: '8px', borderRight: '1px solid #cbd5e1' }}>REF</th>
+                    <th style={{ padding: '8px', borderRight: '1px solid #cbd5e1', textAlign: 'left' }}>DESCRIPCIÓN</th>
+                    
+                    {/* Columnas Tallas Dinámicas */}
+                    <th style={{ padding: '4px', borderRight: '1px solid #cbd5e1', backgroundColor: '#e2e8f0' }}>0-3 / 2</th>
+                    <th style={{ padding: '4px', borderRight: '1px solid #cbd5e1', backgroundColor: '#e2e8f0' }}>3-6 / 3</th>
+                    <th style={{ padding: '4px', borderRight: '1px solid #cbd5e1', backgroundColor: '#e2e8f0' }}>6-9 / 4</th>
+                    <th style={{ padding: '4px', borderRight: '1px solid #cbd5e1', backgroundColor: '#e2e8f0' }}>9-12 / 5</th>
+                    <th style={{ padding: '4px', borderRight: '1px solid #cbd5e1', backgroundColor: '#e2e8f0' }}>6 / 10</th>
+                    <th style={{ padding: '4px', borderRight: '1px solid #cbd5e1', backgroundColor: '#e2e8f0' }}>12</th>
+                    <th style={{ padding: '4px', borderRight: '1px solid #cbd5e1', backgroundColor: '#e2e8f0' }}>14 / 16</th>
+
+                    <th style={{ padding: '8px', borderRight: '1px solid #cbd5e1', backgroundColor: '#fef3c7' }}>CANT. TOTAL</th>
+                    <th style={{ padding: '8px', borderRight: '1px solid #cbd5e1' }}>PRECIO</th>
+                    <th style={{ padding: '8px', borderRight: '1px solid #cbd5e1' }}>VALOR TOTAL</th>
+                    <th style={{ padding: '8px' }}>COLORES / NOTA</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {itemsPedido.map((item, index) => {
-                    const subtotalItem = item.cantidad * item.precioUnitarioL1;
+                  {filas.map((f, idx) => {
+                    const cantFila = calcularTotalPrendasFila(f);
+                    const totalValorFila = cantFila * f.precioUnitario;
+
                     return (
-                      <tr key={index} style={{ borderBottom: '1px solid #e2e8f0' }}>
-                        <td style={{ padding: '10px', fontWeight: 'bold', color: '#0f172a' }}>{item.referencia}</td>
-                        <td style={{ padding: '10px', fontWeight: 'bold' }}>{item.descripcion}</td>
-                        <td style={{ padding: '10px' }}>
-                          <span style={{ backgroundColor: '#e2e8f0', color: '#1e293b', padding: '2px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold' }}>
-                            {item.curva}
-                          </span>
+                      <tr key={f.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                        <td style={{ padding: '8px', fontWeight: 'bold', borderRight: '1px solid #cbd5e1' }}>
+                          N°{idx + 1}<br />
+                          {/* Botón Cámara 📷 Flotante */}
+                          <button
+                            onClick={() => setModalFoto(f)}
+                            title="Ver Foto de la Referencia"
+                            style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '14px', marginTop: '2px' }}
+                          >
+                            📷
+                          </button>
                         </td>
-                        <td style={{ padding: '10px', textAlign: 'center', fontWeight: 'bold' }}>{item.cantidad}</td>
-                        <td style={{ padding: '10px', textAlign: 'right' }}>$ {item.precioUnitarioL1.toLocaleString('es-CO')}</td>
-                        <td style={{ padding: '10px', textAlign: 'right', fontWeight: '900', color: '#059669' }}>$ {subtotalItem.toLocaleString('es-CO')}</td>
+                        <td style={{ padding: '8px', fontWeight: '900', borderRight: '1px solid #cbd5e1', color: '#0f172a' }}>
+                          {f.referencia}
+                        </td>
+                        <td style={{ padding: '8px', fontWeight: 'bold', borderRight: '1px solid #cbd5e1', textAlign: 'left' }}>
+                          {f.descripcion}
+                          <span style={{ display: 'block', fontSize: '9px', color: '#059669' }}>CURVA: {f.curva}</span>
+                        </td>
+
+                        {/* Entradas de Cantidad por Talla */}
+                        {['4', '6', '8', '10', '12', '14', '16'].map(tallaKey => (
+                          <td key={tallaKey} style={{ borderRight: '1px solid #e2e8f0', padding: '2px' }}>
+                            <input
+                              type="number"
+                              value={f.tallas[tallaKey] || 0}
+                              onChange={e => cambiarTalla(f.id, tallaKey, parseInt(e.target.value) || 0)}
+                              style={{ width: '32px', textAlign: 'center', padding: '4px 2px', border: '1px solid #cbd5e1', borderRadius: '4px', fontWeight: 'bold', fontSize: '11px' }}
+                            />
+                          </td>
+                        ))}
+
+                        {/* Cantidad Total de la Fila */}
+                        <td style={{ padding: '8px', fontWeight: '900', borderRight: '1px solid #cbd5e1', backgroundColor: '#fef3c7', fontSize: '12px' }}>
+                          {cantFila}
+                        </td>
+
+                        {/* Precio Unitario L1 */}
+                        <td style={{ padding: '8px', fontWeight: 'bold', borderRight: '1px solid #cbd5e1' }}>
+                          $ {f.precioUnitario.toLocaleString('es-CO')}
+                        </td>
+
+                        {/* Valor Total Fila */}
+                        <td style={{ padding: '8px', fontWeight: '900', borderRight: '1px solid #cbd5e1', color: '#059669', fontSize: '12px' }}>
+                          $ {totalValorFila.toLocaleString('es-CO')}
+                        </td>
+
+                        {/* Colores Ilustrativos */}
+                        <td style={{ padding: '8px', textAlign: 'left' }}>
+                          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                            {f.colores.map((c, cIdx) => (
+                              <span key={cIdx} style={{ backgroundColor: c.bg, color: c.text, padding: '2px 6px', borderRadius: '4px', fontSize: '8px', fontWeight: '900', border: '1px solid #cbd5e1' }}>
+                                {c.nombre}
+                              </span>
+                            ))}
+                          </div>
+                        </td>
                       </tr>
                     );
                   })}
                 </tbody>
               </table>
+            </div>
 
-              {/* Resumen Financiero de Cierre */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderTop: '2px solid #0f172a', paddingTop: '15px' }}>
-                <div style={{ fontSize: '11px', color: '#64748b', maxWidth: '350px' }}>
-                  <p style={{ margin: 0 }}><strong>Notas de Despacho:</strong> Mercancía empacada y verificada por el Módulo de Bodega de Pequix ERP. Pago acordado mediante transferencia bancaria $ COP.</p>
-                </div>
-                
-                <div style={{ width: '280px', fontSize: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', color: '#475569' }}>
-                    <span>Total Unidades:</span>
-                    <strong>{totalPrendas} prendas</strong>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', color: '#475569' }}>
-                    <span>Comisión Asesor (6%):</span>
-                    <strong>$ {comisionAsesor6.toLocaleString('es-CO')} COP</strong>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.2rem', fontWeight: '900', color: '#0f172a', borderTop: '1px solid #cbd5e1', paddingTop: '8px' }}>
-                    <span>TOTAL A PAGAR:</span>
-                    <span style={{ color: '#059669' }}>$ {subtotalCOP.toLocaleString('es-CO')} COP</span>
-                  </div>
-                </div>
+            {/* Resumen Financiero Pie de Página */}
+            <div style={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', padding: '15px 20px', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <span style={{ fontSize: '11px', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 'bold' }}>Total Prendas a Despachar:</span>
+                <h3 style={{ fontSize: '1.4rem', fontWeight: '900', color: '#38bdf8', margin: '2px 0 0 0' }}>
+                  {calcularTotalPrendasGeneral()} Unidades
+                </h3>
               </div>
 
+              <div>
+                <span style={{ fontSize: '11px', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 'bold' }}>Valor Total del Pedido ($ COP):</span>
+                <h2 style={{ fontSize: '1.8rem', fontWeight: '900', color: '#10b981', margin: '2px 0 0 0' }}>
+                  $ {calcularTotalFilas().toLocaleString('es-CO')} COP
+                </h2>
+              </div>
             </div>
 
           </div>
         )}
 
-      </div>
+        {/* MODAL FLOTANTE DE FOTO DE LA REFERENCIA (BOTÓN CÁMARA 📷) */}
+        {modalFoto && (
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.8)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, padding: '15px' }}>
+            <div style={{ backgroundColor: '#ffffff', color: '#0f172a', borderRadius: '16px', padding: '20px', maxWidth: '420px', width: '100%', display: 'flex', flexDirection: 'column', gap: '12px', position: 'relative' }}>
+              
+              <button
+                onClick={() => setModalFoto(null)}
+                style={{ position: 'absolute', top: '12px', right: '12px', border: 'none', background: '#cbd5e1', borderRadius: '50%', width: '28px', height: '28px', cursor: 'pointer', fontWeight: 'bold' }}
+              >
+                ✕
+              </button>
 
-      {/* Estilos CSS para Ocultar Menús durante la Impresión PDF */}
-      <style jsx global>{`
-        @media print {
-          .no-print {
-            display: none !important;
-          }
-          body {
-            background-color: #ffffff !important;
-            color: #0f172a !important;
-          }
-        }
-      `}</style>
+              <div style={{ textAlign: 'center' }}>
+                <span style={{ backgroundColor: '#1e3a8a', color: '#38bdf8', fontSize: '10px', fontWeight: '900', padding: '3px 8px', borderRadius: '4px' }}>
+                  REF: {modalFoto.referencia}
+                </span>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: '900', margin: '6px 0 0 0' }}>{modalFoto.descripcion}</h3>
+              </div>
+
+              {/* Imagen Ilustrativa de la Prenda */}
+              <div style={{ width: '100%', height: '220px', borderRadius: '12px', overflow: 'hidden', backgroundColor: '#f1f5f9' }}>
+                <img src={modalFoto.imagenUrl} alt={modalFoto.descripcion} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              </div>
+
+              {/* Colores Disponibles */}
+              <div>
+                <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#64748b' }}>COLORES DISPONIBLES EN BODEGA:</span>
+                <div style={{ display: 'flex', gap: '6px', marginTop: '4px' }}>
+                  {modalFoto.colores.map((c, idx) => (
+                    <span key={idx} style={{ backgroundColor: c.bg, color: c.text, padding: '3px 8px', borderRadius: '4px', fontSize: '9px', fontWeight: '900', border: '1px solid #cbd5e1' }}>
+                      {c.nombre}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <button
+                onClick={() => setModalFoto(null)}
+                style={{ width: '100%', padding: '10px', backgroundColor: '#10b981', color: '#022c22', border: 'none', borderRadius: '8px', fontWeight: '900', cursor: 'pointer', fontSize: '12px' }}
+              >
+                ✏️ Ver / Editar Ficha Completa
+              </button>
+            </div>
+          </div>
+        )}
+
+      </div>
     </div>
   );
 }
