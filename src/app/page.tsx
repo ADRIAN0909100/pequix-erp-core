@@ -42,7 +42,7 @@ const supabase = {
   })
 };
 
-// Base de Datos Geográfica de Colombia
+// Base Geográfica Colombia & Internacional
 const geoColombia: { [key: string]: string[] } = {
   'ANTIOQUIA': ['Itagüí', 'Medellín', 'Bello', 'Envigado', 'Sabaneta', 'Rionegro'],
   'CÓRDOBA': ['Montería', 'Cereté', 'Sahagún', 'Lorica', 'Planeta Rica'],
@@ -62,16 +62,19 @@ interface FilaItemPedido {
   tallasMap: { [key: string]: number };
   precioUnitario: number;
   colores: { nombre: string; bg: string; text: string }[];
-  imagenUrl?: string;
+  imagenUrl: string;
 }
 
 export default function Home() {
   const [pestana, setPestana] = useState<'NUEVO_PEDIDO' | 'DASHBOARD'>('NUEVO_PEDIDO');
+  // Checkbox: Ocultar únicamente el Valor Total General
   const [mostrarTotalGeneral, setMostrarTotalGeneral] = useState(true);
   const [mensaje, setMensaje] = useState('');
+  
+  // Estado para Modal Flotante de Imagen
   const [modalFoto, setModalFoto] = useState<FilaItemPedido | null>(null);
 
-  // Encabezado del Pedido
+  // Datos Encabezado Pedido
   const [clienteNombre, setClienteNombre] = useState('MANUELA MENDEZ ZAPATA');
   const [nitCliente, setNitCliente] = useState('1000207034-1');
   const [almacen, setAlmacen] = useState('SWEET BOYS (Contacto: CAROLINA)');
@@ -87,23 +90,23 @@ export default function Home() {
   const [descuento, setDescuento] = useState('10%');
   const [vendedor, setVendedor] = useState('ALEJA QUIÑONES');
 
-  // Fechas con Calendario Desplegable Automático
-  const [vigenciaInicio, setVigenciaInicio] = useState('2026-08-25');
-  const [vigenciaFin, setVigenciaFin] = useState('');
+  // Fechas Calendario
+  const [vigenciaInicio, setVigenciaInicio] = useState('2026-08-26');
+  const [vigenciaFin, setVigenciaFin] = useState('2026-08-29');
   const [corteFacturacion, setCorteFacturacion] = useState('2026-08-20');
   const [notasGenerales, setNotasGenerales] = useState('50/ 50');
 
   // Filas del Pedido B2B
   const [filas, setFilas] = useState<FilaItemPedido[]>([
-    { num: 1, referencia: '6179', descripcion: 'BERMUDA JUNIOR', curva: 'JUNIOR', tallasMap: { '4': 2, '6': 2, '8': 3, '10': 3, '12': 3, '14': 3 }, precioUnitario: 56900, colores: [{ nombre: 'AZUL', bg: '#2563eb', text: '#fff' }] },
-    { num: 2, referencia: '6180', descripcion: 'BERMUDA JUNIOR', curva: 'JUNIOR', tallasMap: { '4': 2, '6': 2, '8': 3, '10': 4, '12': 4, '14': 4 }, precioUnitario: 56900, colores: [{ nombre: 'AZUL', bg: '#2563eb', text: '#fff' }] },
-    { num: 3, referencia: '6181', descripcion: 'BERMUDA JUNIOR', curva: 'JUNIOR', tallasMap: { '4': 2, '6': 2, '8': 3, '10': 4, '12': 4, '14': 4 }, precioUnitario: 56900, colores: [{ nombre: 'AZUL', bg: '#2563eb', text: '#fff' }] },
-    { num: 4, referencia: '6182', descripcion: 'BERMUDA JUNIOR', curva: 'JUNIOR', tallasMap: { '4': 2, '6': 2, '8': 6, '10': 6, '12': 6, '14': 6 }, precioUnitario: 56900, colores: [{ nombre: 'AZUL', bg: '#2563eb', text: '#fff' }] },
-    { num: 5, referencia: '6183', descripcion: 'BERMUDA JUNIOR', curva: 'JUNIOR', tallasMap: { '4': 2, '6': 2, '8': 4, '10': 6, '12': 6, '14': 6 }, precioUnitario: 53900, colores: [{ nombre: 'NEGRO', bg: '#000000', text: '#fff' }] },
-    { num: 6, referencia: '6183', descripcion: 'BERMUDA JUNIOR', curva: 'JUNIOR', tallasMap: { '4': 1, '6': 1, '8': 2, '10': 3, '12': 3, '14': 3 }, precioUnitario: 53900, colores: [{ nombre: 'ARENA', bg: '#a3a3a3', text: '#000' }] },
-    { num: 7, referencia: '6184', descripcion: 'BERMUDA JUNIOR', curva: 'JUNIOR', tallasMap: { '4': 1, '6': 1, '8': 2, '10': 3, '12': 3, '14': 3 }, precioUnitario: 51900, colores: [{ nombre: 'CAQUI', bg: '#d4b106', text: '#000' }] },
-    { num: 8, referencia: '6184', descripcion: 'BERMUDA JUNIOR', curva: 'JUNIOR', tallasMap: { '4': 2, '6': 2, '8': 4, '10': 6, '12': 6, '14': 6 }, precioUnitario: 51900, colores: [{ nombre: 'NEGRO', bg: '#000000', text: '#fff' }] },
-    { num: 9, referencia: '6185', descripcion: 'BERMUDA JUNIOR', curva: 'JUNIOR', tallasMap: { '4': 2, '6': 2, '8': 6, '10': 6, '12': 6, '14': 6 }, precioUnitario: 56900, colores: [{ nombre: 'AZUL', bg: '#2563eb', text: '#fff' }] }
+    { num: 1, referencia: '6179', descripcion: 'BERMUDA JUNIOR', curva: 'JUNIOR', tallasMap: { '4': 2, '6': 2, '8': 3, '10': 3, '12': 3, '14': 3 }, precioUnitario: 56900, colores: [{ nombre: 'AZUL', bg: '#2563eb', text: '#fff' }], imagenUrl: 'https://images.unsplash.com/photo-1519238263530-99bdd11df2ea?w=600&q=80' },
+    { num: 2, referencia: '6180', descripcion: 'BERMUDA JUNIOR', curva: 'JUNIOR', tallasMap: { '4': 2, '6': 2, '8': 3, '10': 4, '12': 4, '14': 4 }, precioUnitario: 56900, colores: [{ nombre: 'AZUL', bg: '#2563eb', text: '#fff' }], imagenUrl: 'https://images.unsplash.com/photo-1622290291468-a28f7a7dc6a8?w=600&q=80' },
+    { num: 3, referencia: '6181', descripcion: 'BERMUDA JUNIOR', curva: 'JUNIOR', tallasMap: { '4': 2, '6': 2, '8': 3, '10': 4, '12': 4, '14': 4 }, precioUnitario: 56900, colores: [{ nombre: 'AZUL', bg: '#2563eb', text: '#fff' }], imagenUrl: 'https://images.unsplash.com/photo-1503919545889-aef636e10ad4?w=600&q=80' },
+    { num: 4, referencia: '6182', descripcion: 'BERMUDA JUNIOR', curva: 'JUNIOR', tallasMap: { '4': 2, '6': 2, '8': 6, '10': 6, '12': 6, '14': 6 }, precioUnitario: 56900, colores: [{ nombre: 'AZUL', bg: '#2563eb', text: '#fff' }], imagenUrl: 'https://images.unsplash.com/photo-1519238263530-99bdd11df2ea?w=600&q=80' },
+    { num: 5, referencia: '6183', descripcion: 'BERMUDA JUNIOR', curva: 'JUNIOR', tallasMap: { '4': 2, '6': 2, '8': 4, '10': 6, '12': 6, '14': 6 }, precioUnitario: 53900, colores: [{ nombre: 'NEGRO', bg: '#000000', text: '#fff' }], imagenUrl: 'https://images.unsplash.com/photo-1622290291468-a28f7a7dc6a8?w=600&q=80' },
+    { num: 6, referencia: '6183', descripcion: 'BERMUDA JUNIOR', curva: 'JUNIOR', tallasMap: { '4': 1, '6': 1, '8': 2, '10': 3, '12': 3, '14': 3 }, precioUnitario: 53900, colores: [{ nombre: 'ARENA', bg: '#a3a3a3', text: '#000' }], imagenUrl: 'https://images.unsplash.com/photo-1503919545889-aef636e10ad4?w=600&q=80' },
+    { num: 7, referencia: '6184', descripcion: 'BERMUDA JUNIOR', curva: 'JUNIOR', tallasMap: { '4': 1, '6': 1, '8': 2, '10': 3, '12': 3, '14': 3 }, precioUnitario: 51900, colores: [{ nombre: 'CAQUI', bg: '#d4b106', text: '#000' }], imagenUrl: 'https://images.unsplash.com/photo-1519238263530-99bdd11df2ea?w=600&q=80' },
+    { num: 8, referencia: '6184', descripcion: 'BERMUDA JUNIOR', curva: 'JUNIOR', tallasMap: { '4': 2, '6': 2, '8': 4, '10': 6, '12': 6, '14': 6 }, precioUnitario: 51900, colores: [{ nombre: 'NEGRO', bg: '#000000', text: '#fff' }], imagenUrl: 'https://images.unsplash.com/photo-1622290291468-a28f7a7dc6a8?w=600&q=80' },
+    { num: 9, referencia: '6185', descripcion: 'BERMUDA JUNIOR', curva: 'JUNIOR', tallasMap: { '4': 2, '6': 2, '8': 6, '10': 6, '12': 6, '14': 6 }, precioUnitario: 56900, colores: [{ nombre: 'AZUL', bg: '#2563eb', text: '#fff' }], imagenUrl: 'https://images.unsplash.com/photo-1503919545889-aef636e10ad4?w=600&q=80' }
   ]);
 
   // Lista Master de Categorías
@@ -136,7 +139,7 @@ export default function Home() {
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#090d16', color: '#f8fafc', padding: '15px', fontFamily: 'sans-serif' }}>
-      <div style={{ maxWidth: '1280px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '15px' }}>
+      <div style={{ maxWidth: '1300px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '15px' }}>
         
         {/* CONTROLES SUPERIORES */}
         <div className="no-print" style={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', padding: '15px 20px', borderRadius: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
@@ -148,10 +151,10 @@ export default function Home() {
           </div>
 
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-            {/* Chulito para Ocultar/Mostrar el Valor Total General únicamente */}
+            {/* Chulito para Ocultar/Mostrar únicamente el VALOR TOTAL GENERAL DEL PEDIDO */}
             <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: 'bold', color: '#fbbf24', cursor: 'pointer', backgroundColor: '#1e293b', padding: '6px 12px', borderRadius: '6px', border: '1px solid #334155' }}>
               <input type="checkbox" checked={mostrarTotalGeneral} onChange={e => setMostrarTotalGeneral(e.target.checked)} />
-              💵 Mostrar Valor Total General ($ COP) en PDF
+              💵 Mostrar Valor Total General del Pedido ($ COP)
             </label>
 
             <button onClick={guardarYExportarPDF} style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', backgroundColor: '#10b981', color: '#022c22', fontWeight: '900', fontSize: '11px', cursor: 'pointer' }}>
@@ -238,7 +241,7 @@ export default function Home() {
                 <input value={celular} onChange={e => setCelular(e.target.value)} style={{ flex: 1, border: 'none', fontWeight: 'bold', color: '#dc2626', outline: 'none' }} />
               </div>
 
-              {/* Selector de Departamento y Ciudad */}
+              {/* Selector de Ubicación */}
               <div style={{ borderBottom: '1px solid #000', padding: '4px 8px', display: 'flex', gap: '6px' }}>
                 <span style={{ width: '100px', color: '#475569' }}>UBICACIÓN</span>
                 <select value={deptoSeleccionado} onChange={e => { setDeptoSeleccionado(e.target.value); setCiudadSeleccionada(geoColombia[e.target.value][0]); }} style={{ border: 'none', fontWeight: 'bold', color: '#dc2626', fontSize: '10px' }}>
@@ -275,50 +278,50 @@ export default function Home() {
             />
           </div>
 
-          {/* 3. MATRIZ DE TALLAS MILIMÉTRICA CON CAJONCITOS INDEPENDIENTES */}
+          {/* 3. MATRIZ CON CURVAS EN VERTICAL (IZQUIERDA) Y TALLAS COMPACTAS */}
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10px', textAlign: 'center', border: '1px solid #000' }}>
               <thead>
-                {/* Encabezado Fila 1: Grupos de Curvas */}
                 <tr style={{ backgroundColor: '#f1f5f9', borderBottom: '1px solid #000', fontWeight: '900' }}>
-                  <th style={{ padding: '4px', borderRight: '1px solid #000', width: '30px' }} rowSpan={2}>N°</th>
-                  <th style={{ padding: '4px', borderRight: '1px solid #000', width: '50px' }} rowSpan={2}>REF</th>
-                  <th style={{ padding: '4px', borderRight: '1px solid #000', width: '160px', textAlign: 'left' }} rowSpan={2}>DESCRIPCIÓN</th>
+                  <th style={{ padding: '4px', borderRight: '1px solid #000', width: '30px' }}>N°</th>
+                  <th style={{ padding: '4px', borderRight: '1px solid #000', width: '65px' }}>REF</th>
+                  <th style={{ padding: '4px', borderRight: '1px solid #000', width: '150px', textAlign: 'left' }}>DESCRIPCIÓN</th>
                   
-                  {/* Encabezados de Curva por Fila Nivelada */}
-                  <th style={{ padding: '2px', borderRight: '1px solid #000', borderBottom: '1px solid #000' }} colSpan={4}>MESES</th>
-                  <th style={{ padding: '2px', borderRight: '1px solid #000', borderBottom: '1px solid #000' }} colSpan={5}>BEBÉS (EXPLORADOR)</th>
-                  <th style={{ padding: '2px', borderRight: '1px solid #000', borderBottom: '1px solid #000' }} colSpan={7}>JUNIOR</th>
+                  {/* BLOQUE CENTRAL: CURVAS VERTICALES + MATRIZ DE TALLAS */}
+                  <th style={{ padding: '0', borderRight: '1px solid #000' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr', height: '100%' }}>
+                      
+                      {/* Curvas Dispuestas Verticalmente (No ocupan espacio horizontal) */}
+                      <div style={{ borderRight: '1px solid #000', backgroundColor: '#e2e8f0', display: 'flex', flexDirection: 'column', justifyContent: 'space-around', fontWeight: '900', fontSize: '8px', padding: '2px 0' }}>
+                        <div style={{ borderBottom: '1px solid #cbd5e1', padding: '1px' }}>MESES</div>
+                        <div style={{ borderBottom: '1px solid #cbd5e1', padding: '1px' }}>BEBÉS</div>
+                        <div style={{ borderBottom: '1px solid #cbd5e1', padding: '1px' }}>JUNIOR</div>
+                        <div style={{ padding: '1px' }}>JUVENIL</div>
+                      </div>
 
-                  <th style={{ padding: '4px', borderRight: '1px solid #000', width: '50px' }} rowSpan={2}>CANT. TOTAL</th>
-                  <th style={{ padding: '4px', borderRight: '1px solid #000', width: '70px' }} rowSpan={2}>PRECIO</th>
-                  <th style={{ padding: '4px', borderRight: '1px solid #000', width: '85px' }} rowSpan={2}>VALOR TOTAL</th>
-                  <th style={{ padding: '4px', width: '100px' }} rowSpan={2}>NOTA / COLOR</th>
-                </tr>
+                      {/* Grilla Superior de Tallas */}
+                      <div>
+                        <div style={{ borderBottom: '1px solid #000', padding: '2px', fontWeight: '900', backgroundColor: '#f8fafc' }}>
+                          MATRIZ DE TALLAS INDEPENDIENTES
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', fontSize: '8px', fontWeight: 'bold' }}>
+                          <span style={{ borderRight: '1px solid #cbd5e1', padding: '2px' }}>0-3 / 2 / 4 / 18</span>
+                          <span style={{ borderRight: '1px solid #cbd5e1', padding: '2px' }}>3-6 / 3 / 6 / 20</span>
+                          <span style={{ borderRight: '1px solid #cbd5e1', padding: '2px' }}>6-9 / 4 / 8 / 22</span>
+                          <span style={{ borderRight: '1px solid #cbd5e1', padding: '2px' }}>9-12 / 5 / 10 / 24</span>
+                          <span style={{ borderRight: '1px solid #cbd5e1', padding: '2px' }}>6 / 12</span>
+                          <span style={{ borderRight: '1px solid #cbd5e1', padding: '2px' }}>14</span>
+                          <span style={{ padding: '2px' }}>16</span>
+                        </div>
+                      </div>
 
-                {/* Encabezado Fila 2: Cajoncitos de Tallas Independientes */}
-                <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #000', fontSize: '8px', fontWeight: 'bold' }}>
-                  {/* MESES */}
-                  <th style={{ borderRight: '1px solid #cbd5e1', padding: '2px', width: '22px' }}>0-3</th>
-                  <th style={{ borderRight: '1px solid #cbd5e1', padding: '2px', width: '22px' }}>3-6</th>
-                  <th style={{ borderRight: '1px solid #cbd5e1', padding: '2px', width: '22px' }}>6-9</th>
-                  <th style={{ borderRight: '1px solid #000', padding: '2px', width: '22px' }}>9-12</th>
+                    </div>
+                  </th>
 
-                  {/* BEBÉS (2=6-12, 3=12-18, 4=18-24, 5=24-36, 6=36-48) */}
-                  <th style={{ borderRight: '1px solid #cbd5e1', padding: '2px', width: '22px' }}>2</th>
-                  <th style={{ borderRight: '1px solid #cbd5e1', padding: '2px', width: '22px' }}>3</th>
-                  <th style={{ borderRight: '1px solid #cbd5e1', padding: '2px', width: '22px' }}>4</th>
-                  <th style={{ borderRight: '1px solid #cbd5e1', padding: '2px', width: '22px' }}>5</th>
-                  <th style={{ borderRight: '1px solid #000', padding: '2px', width: '22px' }}>6</th>
-
-                  {/* JUNIOR */}
-                  <th style={{ borderRight: '1px solid #cbd5e1', padding: '2px', width: '22px' }}>4</th>
-                  <th style={{ borderRight: '1px solid #cbd5e1', padding: '2px', width: '22px' }}>6</th>
-                  <th style={{ borderRight: '1px solid #cbd5e1', padding: '2px', width: '22px' }}>8</th>
-                  <th style={{ borderRight: '1px solid #cbd5e1', padding: '2px', width: '22px' }}>10</th>
-                  <th style={{ borderRight: '1px solid #cbd5e1', padding: '2px', width: '22px' }}>12</th>
-                  <th style={{ borderRight: '1px solid #cbd5e1', padding: '2px', width: '22px' }}>14</th>
-                  <th style={{ borderRight: '1px solid #000', padding: '2px', width: '22px' }}>16</th>
+                  <th style={{ padding: '4px', borderRight: '1px solid #000', width: '55px' }}>CANT. TOTAL</th>
+                  <th style={{ padding: '4px', borderRight: '1px solid #000', width: '70px' }}>PRECIO</th>
+                  <th style={{ padding: '4px', borderRight: '1px solid #000', width: '85px' }}>VALOR TOTAL</th>
+                  <th style={{ padding: '4px', width: '110px' }}>NOTA / COLOR</th>
                 </tr>
               </thead>
 
@@ -331,28 +334,56 @@ export default function Home() {
                     <tr key={idx} style={{ borderBottom: '1px solid #cbd5e1' }}>
                       <td style={{ padding: '4px', fontWeight: 'bold', borderRight: '1px solid #cbd5e1' }}>
                         {idx + 1}
-                        {f.imagenUrl && (
-                          <button onClick={() => setModalFoto(f)} className="no-print" style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '11px', display: 'block', margin: '0 auto' }}>📷</button>
-                        )}
                       </td>
-                      <td style={{ padding: '4px', fontWeight: '900', borderRight: '1px solid #cbd5e1' }}>{f.referencia}</td>
-                      <td style={{ padding: '4px', fontWeight: 'bold', borderRight: '1px solid #cbd5e1', textAlign: 'left' }}>{f.descripcion}</td>
 
-                      {/* Recuadros Independientes de Tallas */}
-                      {['0-3', '3-6', '6-9', '9-12', '2', '3', '4_B', '5', '6_B', '4', '6', '8', '10', '12', '14', '16'].map(tKey => (
-                        <td key={tKey} style={{ borderRight: '1px solid #cbd5e1', padding: '1px' }}>
-                          <input
-                            type="number"
-                            value={f.tallasMap[tKey] || ''}
-                            onChange={e => cambiarTallaValor(idx, tKey, parseInt(e.target.value) || 0)}
-                            style={{ width: '100%', textAlign: 'center', border: 'none', fontWeight: 'bold', fontSize: '10px', outline: 'none', backgroundColor: 'transparent' }}
-                          />
-                        </td>
-                      ))}
+                      {/* REF CON BOTÓN DE CÁMARA 📷 EMBEBIDO */}
+                      <td style={{ padding: '4px', fontWeight: '900', borderRight: '1px solid #cbd5e1' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+                          <span>{f.referencia}</span>
+                          <button
+                            onClick={() => setModalFoto(f)}
+                            className="no-print"
+                            title="Toca para ver la foto flotante de la prenda"
+                            style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '12px', padding: 0 }}
+                          >
+                            📷
+                          </button>
+                        </div>
+                      </td>
 
-                      <td style={{ padding: '4px', fontWeight: '900', borderRight: '1px solid #cbd5e1', backgroundColor: '#fef3c7' }}>{cantTotal}</td>
-                      <td style={{ padding: '4px', fontWeight: 'bold', borderRight: '1px solid #cbd5e1' }}>$ {f.precioUnitario.toLocaleString('es-CO')}</td>
-                      <td style={{ padding: '4px', fontWeight: '900', borderRight: '1px solid #cbd5e1' }}>$ {valorTotal.toLocaleString('es-CO')}</td>
+                      <td style={{ padding: '4px', fontWeight: 'bold', borderRight: '1px solid #cbd5e1', textAlign: 'left' }}>
+                        {f.descripcion}
+                      </td>
+
+                      {/* Cajoncitos de Tallas Independientes */}
+                      <td style={{ padding: '0', borderRight: '1px solid #cbd5e1' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', height: '100%' }}>
+                          {['4', '6', '8', '10', '12', '14', '16'].map(tKey => (
+                            <div key={tKey} style={{ borderRight: '1px solid #cbd5e1', padding: '2px' }}>
+                              <input
+                                type="number"
+                                value={f.tallasMap[tKey] || ''}
+                                onChange={e => cambiarTallaValor(idx, tKey, parseInt(e.target.value) || 0)}
+                                style={{ width: '100%', textAlign: 'center', border: 'none', fontWeight: 'bold', fontSize: '10px', outline: 'none', backgroundColor: 'transparent' }}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </td>
+
+                      <td style={{ padding: '4px', fontWeight: '900', borderRight: '1px solid #cbd5e1', backgroundColor: '#fef3c7' }}>
+                        {cantTotal}
+                      </td>
+
+                      {/* Precio Unitario SIEMPRE VISIBLE para el Facturador */}
+                      <td style={{ padding: '4px', fontWeight: 'bold', borderRight: '1px solid #cbd5e1' }}>
+                        $ {f.precioUnitario.toLocaleString('es-CO')}
+                      </td>
+
+                      {/* Valor Total por Fila SIEMPRE VISIBLE */}
+                      <td style={{ padding: '4px', fontWeight: '900', borderRight: '1px solid #cbd5e1' }}>
+                        $ {valorTotal.toLocaleString('es-CO')}
+                      </td>
                       
                       <td style={{ padding: '4px', textAlign: 'center' }}>
                         {f.colores.map((c, cIdx) => (
@@ -397,10 +428,11 @@ export default function Home() {
                   );
                 })}
                 <tr style={{ backgroundColor: '#f1f5f9', fontWeight: '900' }}>
-                  <td style={{ padding: '6px' }}>TOTAL GENERAL</td>
+                  <td style={{ padding: '6px' }}>TOTAL GENERAL DE UNIDADES Y VALOR</td>
                   <td style={{ padding: '6px', textAlign: 'center' }}>{totalPrendasGeneral()} unds</td>
                   <td style={{ padding: '6px', textAlign: 'right', color: '#dc2626', fontSize: '12px' }}>
-                    {mostrarTotalGeneral ? `$ ${totalValorGeneral().toLocaleString('es-CO')} COP` : '[VALOR RESERVADO POR CHULITO]'}
+                    {/* El Checkbox controla ÚNICAMENTE la visibilidad de este monto general */}
+                    {mostrarTotalGeneral ? `$ ${totalValorGeneral().toLocaleString('es-CO')} COP` : '[VALOR TOTAL GENERAL RESERVADO]'}
                   </td>
                 </tr>
               </tbody>
@@ -431,20 +463,62 @@ export default function Home() {
 
         </div>
 
-      </div>
+        {/* MODAL FLOTANTE AMPLIO EN EL CENTRO CON LA FOTO DE LA REFERENCIA (CÁMARA 📷) */}
+        {modalFoto && (
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, padding: '20px' }}>
+            <div style={{ backgroundColor: '#ffffff', color: '#0f172a', borderRadius: '18px', padding: '25px', maxWidth: '520px', width: '100%', display: 'flex', flexDirection: 'column', gap: '15px', position: 'relative', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.5)' }}>
+              
+              <button
+                onClick={() => setModalFoto(null)}
+                style={{ position: 'absolute', top: '15px', right: '15px', border: 'none', background: '#cbd5e1', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px' }}
+              >
+                ✕
+              </button>
 
-      {/* ESTILOS DE IMPRESIÓN */}
-      <style jsx global>{`
-        @media print {
-          .no-print {
-            display: none !important;
-          }
-          body {
-            background-color: #ffffff !important;
-            color: #000000 !important;
-          }
-        }
-      `}</style>
+              <div style={{ textAlign: 'center' }}>
+                <span style={{ backgroundColor: '#1e3a8a', color: '#38bdf8', fontSize: '11px', fontWeight: '900', padding: '4px 10px', borderRadius: '6px' }}>
+                  REFERENCIA: {modalFoto.referencia} · {modalFoto.curva}
+                </span>
+                <h3 style={{ fontSize: '1.3rem', fontWeight: '900', margin: '8px 0 0 0' }}>{modalFoto.descripcion}</h3>
+              </div>
+
+              {/* Contenedor Amplio para la Imagen de la Prenda */}
+              <div style={{ width: '100%', height: '300px', borderRadius: '14px', overflow: 'hidden', backgroundColor: '#f1f5f9', border: '1px solid #cbd5e1' }}>
+                <img src={modalFoto.imagenUrl} alt={modalFoto.descripcion} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              </div>
+
+              {/* Información de Colores y Precio Unitario */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #e2e8f0', paddingTop: '10px' }}>
+                <div>
+                  <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#64748b', display: 'block' }}>COLORES EN STOCK:</span>
+                  <div style={{ display: 'flex', gap: '6px', marginTop: '4px' }}>
+                    {modalFoto.colores.map((c, idx) => (
+                      <span key={idx} style={{ backgroundColor: c.bg, color: c.text, padding: '3px 8px', borderRadius: '4px', fontSize: '9px', fontWeight: '900', border: '1px solid #cbd5e1' }}>
+                        {c.nombre}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                <div style={{ textAlign: 'right' }}>
+                  <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#64748b' }}>PRECIO L1 MAYORISTA:</span>
+                  <div style={{ fontSize: '1.2rem', fontWeight: '900', color: '#059669' }}>
+                    $ {modalFoto.precioUnitario.toLocaleString('es-CO')}
+                  </div>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setModalFoto(null)}
+                style={{ width: '100%', padding: '12px', backgroundColor: '#10b981', color: '#022c22', border: 'none', borderRadius: '10px', fontWeight: '900', cursor: 'pointer', fontSize: '12px' }}
+              >
+                ✏️ Cerrar Ficha / Editar Cantidades
+              </button>
+            </div>
+          </div>
+        )}
+
+      </div>
     </div>
   );
 }
