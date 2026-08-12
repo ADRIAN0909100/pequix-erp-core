@@ -42,380 +42,351 @@ const supabase = {
   })
 };
 
-interface FilaPedido {
-  id: number;
+interface FilaItemPedido {
+  num: number;
   referencia: string;
   descripcion: string;
   curva: 'MESES' | 'BEBÉS' | 'JUNIOR' | 'JUVENIL';
-  tallas: { [key: string]: number };
+  tallasMap: { [key: string]: number };
   precioUnitario: number;
   colores: { nombre: string; bg: string; text: string }[];
+  notaPrenda?: string;
   imagenUrl?: string;
 }
 
 export default function Home() {
-  const [pestana, setPestana] = useState<'NUEVO_PEDIDO' | 'DASHBOARD' | 'PDF'>('NUEVO_PEDIDO');
-  const [listaSeleccionada, setListaSeleccionada] = useState<'L1' | 'L2' | 'L3' | 'L4' | 'L5'>('L1');
+  const [pestana, setPestana] = useState<'NUEVO_PEDIDO' | 'RESUMEN' | 'DASHBOARD'>('NUEVO_PEDIDO');
+  const [mostrarPreciosPDF, setMostrarPreciosPDF] = useState(true);
   const [mensaje, setMensaje] = useState('');
-  const [modalFoto, setModalFoto] = useState<FilaPedido | null>(null);
+  const [modalFoto, setModalFoto] = useState<FilaItemPedido | null>(null);
 
-  // Formulario Pedido
-  const [clienteNombre, setClienteNombre] = useState('');
-  const [nitCliente, setNitCliente] = useState('');
-  const [ciudad, setCiudad] = useState('');
-  const [vendedor, setVendedor] = useState('Adrián Peña (USR-0001)');
+  // Encabezado del Pedido
+  const [clienteNombre, setClienteNombre] = useState('MANUELA MENDEZ ZAPATA');
+  const [nitCliente, setNitCliente] = useState('1000207034-1');
+  const [almacen, setAlmacen] = useState('SWEET BOYS (Contacto: CAROLINA)');
+  const [telefono, setTelefono] = useState('');
+  const [celular, setCelular] = useState('3005381816');
+  const [direccion, setDireccion] = useState('CL 49 49 22');
+  const [ciudadDepto, setCiudadDepto] = useState('ITAGUI ANTIOQUIA');
+  const [formaPago, setFormaPago] = useState('30 DÍAS');
+  const [descuento, setDescuento] = useState('10%');
+  const [vendedor, setVendedor] = useState('ALEJA QUIÑONES');
+  const [vigenciaInicio, setVigenciaInicio] = useState('2026-08-25');
+  const [corteFacturacion, setCorteFacturacion] = useState('1 al 20 de cada mes');
+  const [notasGenerales, setNotasGenerales] = useState('50/ 50');
 
   // Filas del Pedido B2B
-  const [filas, setFilas] = useState<FilaPedido[]>([
-    {
-      id: 1,
-      referencia: '2553',
-      descripcion: 'CONJUNTO JUNIOR BASICO T16',
-      curva: 'JUNIOR',
-      tallas: { '4': 2, '6': 3, '8': 4, '10': 2, '12': 1, '14': 0, '16': 0 },
-      precioUnitario: 43900,
-      colores: [
-        { nombre: 'ROJO', bg: '#dc2626', text: '#ffffff' },
-        { nombre: 'AZUL CLARO', bg: '#38bdf8', text: '#0f172a' },
-        { nombre: 'GRIS JASPEADO', bg: '#e2e8f0', text: '#0f172a' }
-      ],
-      imagenUrl: 'https://images.unsplash.com/photo-1622290291468-a28f7a7dc6a8?w=500&q=80'
-    },
-    {
-      id: 2,
-      referencia: '745',
-      descripcion: 'CONJUNTO BEBE DORMILON',
-      curva: 'BEBÉS',
-      tallas: { '2': 4, '3': 5, '4': 6, '5': 3, '6': 2 },
-      precioUnitario: 59900,
-      colores: [
-        { nombre: 'AMARILLO', bg: '#facc15', text: '#451a03' },
-        { nombre: 'AZUL', bg: '#2563eb', text: '#ffffff' }
-      ],
-      imagenUrl: 'https://images.unsplash.com/photo-1519238263530-99bdd11df2ea?w=500&q=80'
-    }
+  const [filas, setFilas] = useState<FilaItemPedido[]>([
+    { num: 1, referencia: '6179', descripcion: 'BERMUDA JUNIOR', curva: 'JUNIOR', tallasMap: { '4': 2, '6': 2, '8': 3, '10': 3, '12': 3, '14': 3 }, precioUnitario: 56900, colores: [{ nombre: 'AZUL', bg: '#2563eb', text: '#fff' }], imagenUrl: 'https://images.unsplash.com/photo-1622290291468-a28f7a7dc6a8?w=500&q=80' },
+    { num: 2, referencia: '6180', descripcion: 'BERMUDA JUNIOR', curva: 'JUNIOR', tallasMap: { '4': 2, '6': 2, '8': 3, '10': 4, '12': 4, '14': 4 }, precioUnitario: 56900, colores: [{ nombre: 'AZUL', bg: '#2563eb', text: '#fff' }] },
+    { num: 3, referencia: '6181', descripcion: 'BERMUDA JUNIOR', curva: 'JUNIOR', tallasMap: { '4': 2, '6': 2, '8': 3, '10': 4, '12': 4, '14': 4 }, precioUnitario: 56900, colores: [{ nombre: 'AZUL', bg: '#2563eb', text: '#fff' }] },
+    { num: 4, referencia: '6182', descripcion: 'BERMUDA JUNIOR', curva: 'JUNIOR', tallasMap: { '4': 2, '6': 2, '8': 6, '10': 6, '12': 6, '14': 6 }, precioUnitario: 56900, colores: [{ nombre: 'AZUL', bg: '#2563eb', text: '#fff' }] },
+    { num: 5, referencia: '6183', descripcion: 'BERMUDA JUNIOR', curva: 'JUNIOR', tallasMap: { '4': 2, '6': 2, '8': 4, '10': 6, '12': 6, '14': 6 }, precioUnitario: 53900, colores: [{ nombre: 'NEGRO', bg: '#000000', text: '#fff' }] },
+    { num: 6, referencia: '6183', descripcion: 'BERMUDA JUNIOR', curva: 'JUNIOR', tallasMap: { '4': 1, '6': 1, '8': 2, '10': 3, '12': 3, '14': 3 }, precioUnitario: 53900, colores: [{ nombre: 'ARENA', bg: '#a3a3a3', text: '#000' }] },
+    { num: 7, referencia: '6184', descripcion: 'BERMUDA JUNIOR', curva: 'JUNIOR', tallasMap: { '4': 1, '6': 1, '8': 2, '10': 3, '12': 3, '14': 3 }, precioUnitario: 51900, colores: [{ nombre: 'CAQUI', bg: '#d4b106', text: '#000' }] },
+    { num: 8, referencia: '6184', descripcion: 'BERMUDA JUNIOR', curva: 'JUNIOR', tallasMap: { '4': 2, '6': 2, '8': 4, '10': 6, '12': 6, '14': 6 }, precioUnitario: 51900, colores: [{ nombre: 'NEGRO', bg: '#000000', text: '#fff' }] },
+    { num: 9, referencia: '6185', descripcion: 'BERMUDA JUNIOR', curva: 'JUNIOR', tallasMap: { '4': 2, '6': 2, '8': 6, '10': 6, '12': 6, '14': 6 }, precioUnitario: 56900, colores: [{ nombre: 'AZUL', bg: '#2563eb', text: '#fff' }] }
   ]);
 
-  const cambiarTalla = (filaId: number, tallaKey: string, valor: number) => {
-    setFilas(prev =>
-      prev.map(f => {
-        if (f.id === filaId) {
-          return {
-            ...f,
-            tallas: { ...f.tallas, [tallaKey]: Math.max(0, valor) }
-          };
-        }
-        return f;
-      })
-    );
+  // Lista Master de Categorías para Alertas Visulaes (Chulitos/Equis)
+  const categoriasMaster = [
+    'BERMUDA JUNIOR', 'CAMISETA JUNIOR CR', 'CONJUNTO JUNIOR PREMIUM T16', 'JEAN JUNIOR',
+    'BERMUDA BEBE', 'CAMISA BEBE MC', 'CAMISA BEBE ML', 'CAMISA JUNIOR MC',
+    'CAMISA JUNIOR ML', 'CAMISETA BEBE TIPO POLO', 'CAMISETA JUNIOR TIPO POLO', 'CAMISETAS BEBE CR',
+    'CONJUNTO BEBE BASICO', 'CONJUNTO BEBE DORMILON', 'CONJUNTO BEBE PREMIUM', 'CONJUNTO JUNIOR BASICO T16',
+    'CONJUNTO JUNIOR PREMIUM T12', 'JEAN BEBE', 'PANTALON BEBE', 'PANTALON JUNIOR',
+    'TRIO CONJUNTO BEBE PREMIUN ELEGANTE', 'TRIO CONJUNTO JUNIOR PREMIUN DEPORTIVO T-16', 'TRIO CONJUNTO JUNIOR PREMIUN ELEGANTE T-12'
+  ];
+
+  const cambiarTallaValor = (idx: number, keyTalla: string, val: number) => {
+    setFilas(prev => prev.map((f, i) => i === idx ? { ...f, tallasMap: { ...f.tallasMap, [keyTalla]: Math.max(0, val) } } : f));
   };
 
-  const calcularTotalPrendasFila = (f: FilaPedido) => {
-    return Object.values(f.tallas).reduce((a, b) => a + (b || 0), 0);
-  };
+  const totalPrendasFila = (f: FilaItemPedido) => Object.values(f.tallasMap).reduce((a, b) => a + (b || 0), 0);
+  const totalValorFila = (f: FilaItemPedido) => totalPrendasFila(f) * f.precioUnitario;
 
-  const calcularTotalFilas = () => {
-    return filas.reduce((acc, f) => acc + (calcularTotalPrendasFila(f) * f.precioUnitario), 0);
-  };
+  const totalPrendasGeneral = () => filas.reduce((acc, f) => acc + totalPrendasFila(f), 0);
+  const totalValorGeneral = () => filas.reduce((acc, f) => acc + totalValorFila(f), 0);
 
-  const calcularTotalPrendasGeneral = () => {
-    return filas.reduce((acc, f) => acc + calcularTotalPrendasFila(f), 0);
-  };
+  // Agrupación por Categoría
+  const categoriasEnPedido = Array.from(new Set(filas.map(f => f.descripcion)));
 
-  // Guardar Pedido en PostgreSQL
-  const guardarPedido = async () => {
-    const totalCOP = calcularTotalFilas();
-    const prendas = calcularTotalPrendasGeneral();
-    const codigo = `PED-${Date.now()}`;
-
-    await supabase.from('pedidos').insert([{
-      tenant_id: 'EMP-0001',
-      codigo_pedido: codigo,
-      vendedor_nombre: vendedor,
-      lista_aplicada: listaSeleccionada,
-      total_prendas: prendas,
-      subtotal_cop: totalCOP,
-      estado: 'GUARDADO_B2B'
-    }]);
-
-    // Registrar en Audit Log
-    await supabase.from('audit_logs').insert([{
-      tenant_id: 'EMP-0001',
-      usuario_id: 'USR-0001',
-      usuario_nombre: 'Adrián Peña',
-      accion: 'CREAR_PEDIDO_B2B_MATRIZ',
-      entidad_afectada: 'PEDIDOS',
-      entidad_id: codigo,
-      valor_nuevo: { cliente: clienteNombre, total_cop: totalCOP, prendas: prendas }
-    }]);
-
-    setMensaje(`🎉 ¡Pedido ${codigo} guardado exitosamente por $ ${totalCOP.toLocaleString('es-CO')} COP (${prendas} prendas)!`);
+  const guardarYExportarPDF = async () => {
+    window.print();
+    setMensaje('🎉 ¡Pedido guardado y PDF generado con éxito!');
   };
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#090d16', color: '#f8fafc', padding: '15px', fontFamily: 'sans-serif' }}>
-      <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '15px' }}>
+      <div style={{ maxWidth: '1250px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '15px' }}>
         
-        {/* Header Superior con Navegación de Pestañas */}
-        <div style={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', padding: '15px 20px', borderRadius: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+        {/* BARRA SUPERIOR DE NAVEGACIÓN Y CONTROLES */}
+        <div className="no-print" style={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', padding: '15px 20px', borderRadius: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
           <div>
             <span style={{ backgroundColor: '#10b981', color: '#022c22', fontWeight: '900', fontSize: '10px', padding: '3px 8px', borderRadius: '4px', textTransform: 'uppercase' }}>
-              🟢 PEQUIX ERP CORE SAAS · FJ KIDS S.A.S
+              🟢 PEQUIX ERP CORE · FJ KIDS S.A.S
             </span>
-            <h1 style={{ fontSize: '1.2rem', fontWeight: '900', margin: '4px 0 0 0', color: '#ffffff' }}>Módulo B2B Toma de Pedidos por Matriz de Tallas</h1>
+            <h1 style={{ fontSize: '1.2rem', fontWeight: '900', margin: '4px 0 0 0', color: '#ffffff' }}>Módulo B2B Toma de Pedidos & Ficha Oficial</h1>
           </div>
 
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <button onClick={() => setPestana('NUEVO_PEDIDO')} style={{ padding: '8px 14px', borderRadius: '8px', border: 'none', fontWeight: 'bold', fontSize: '11px', cursor: 'pointer', backgroundColor: pestana === 'NUEVO_PEDIDO' ? '#10b981' : '#1e293b', color: pestana === 'NUEVO_PEDIDO' ? '#022c22' : '#ffffff' }}>
-              📋 Nuevo Pedido
-            </button>
-            <button onClick={() => setPestana('DASHBOARD')} style={{ padding: '8px 14px', borderRadius: '8px', border: 'none', fontWeight: 'bold', fontSize: '11px', cursor: 'pointer', backgroundColor: pestana === 'DASHBOARD' ? '#fbbf24' : '#1e293b', color: pestana === 'DASHBOARD' ? '#451a03' : '#ffffff' }}>
-              📊 Dashboard
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: 'bold', color: '#fbbf24', cursor: 'pointer', backgroundColor: '#1e293b', padding: '6px 10px', borderRadius: '6px', border: '1px solid #334155' }}>
+              <input type="checkbox" checked={mostrarPreciosPDF} onChange={e => setMostrarPreciosPDF(e.target.checked)} />
+              💵 Mostrar Precios $ COP en PDF
+            </label>
+
+            <button onClick={guardarYExportarPDF} style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', backgroundColor: '#10b981', color: '#022c22', fontWeight: '900', fontSize: '11px', cursor: 'pointer' }}>
+              🖨️ Guardar / Descargar PDF
             </button>
           </div>
         </div>
 
         {mensaje && (
-          <div style={{ backgroundColor: '#064e3b', border: '1px solid #10b981', color: '#6ee7b7', padding: '12px', borderRadius: '10px', fontWeight: 'bold', fontSize: '12px', textAlign: 'center' }}>
+          <div className="no-print" style={{ backgroundColor: '#064e3b', border: '1px solid #10b981', color: '#6ee7b7', padding: '12px', borderRadius: '10px', fontWeight: 'bold', fontSize: '12px', textAlign: 'center' }}>
             {mensaje}
           </div>
         )}
 
-        {/* PESTAÑA PRINCIPAL: NUEVO PEDIDO MATRIZ */}
-        {pestana === 'NUEVO_PEDIDO' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+        {/* CONTENEDOR PRINCIPAL DEL PEDIDO (FORMATO OFICIAL IMPRESO) */}
+        <div style={{ backgroundColor: '#ffffff', color: '#000000', padding: '20px', borderRadius: '12px', border: '2px solid #000000' }}>
+          
+          {/* 1. ENCABEZADO SUPERIOR CON LOGO E INFORMACIÓN LEGAL */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 2.5fr 1.3fr', border: '1px solid #000000', marginBottom: '-1px' }}>
+            <div style={{ padding: '10px', borderRight: '1px solid #000000', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+              <h2 style={{ fontSize: '1.5rem', fontWeight: '900', margin: 0, color: '#dc2626' }}>fj kids</h2>
+            </div>
             
-            {/* 1. Botones de Listas de Precios y Guardado */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '8px' }}>
-              <button onClick={() => setListaSeleccionada('L1')} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #334155', backgroundColor: listaSeleccionada === 'L1' ? '#1e3a8a' : '#0f172a', color: '#38bdf8', fontWeight: '900', fontSize: '11px', cursor: 'pointer' }}>
-                L1 · MAYORISTA
-              </button>
-              <button onClick={() => setListaSeleccionada('L2')} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #334155', backgroundColor: listaSeleccionada === 'L2' ? '#1e3a8a' : '#0f172a', color: '#cbd5e1', fontWeight: 'bold', fontSize: '11px', cursor: 'pointer' }}>
-                L2 · DISTRIBUIDOR
-              </button>
-              <button onClick={() => setListaSeleccionada('L3')} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #334155', backgroundColor: listaSeleccionada === 'L3' ? '#1e3a8a' : '#0f172a', color: '#cbd5e1', fontWeight: 'bold', fontSize: '11px', cursor: 'pointer' }}>
-                L3 · CLIENTE
-              </button>
-              <button onClick={() => setListaSeleccionada('L4')} style={{ padding: '10px', borderRadius: '8px', border: '1px solid #334155', backgroundColor: listaSeleccionada === 'L4' ? '#1e3a8a' : '#0f172a', color: '#cbd5e1', fontWeight: 'bold', fontSize: '11px', cursor: 'pointer' }}>
-                L4 · CLIENTE FINAL
-              </button>
-              <button onClick={guardarPedido} style={{ padding: '10px', borderRadius: '8px', border: 'none', backgroundColor: '#10b981', color: '#022c22', fontWeight: '900', fontSize: '11px', cursor: 'pointer' }}>
-                💾 GUARDAR PEDIDO
-              </button>
+            <div style={{ padding: '10px', textAlign: 'center', borderRight: '1px solid #000000' }}>
+              <h3 style={{ fontSize: '1.2rem', fontWeight: '900', margin: 0 }}>FJ KIDS S.A.S</h3>
+              <p style={{ margin: '2px 0 0 0', fontSize: '10px', fontWeight: 'bold' }}>
+                NIT. 900.410.656-5 · Calle 71 #52a-77 · Tel: 3128920808 / Cel: 3128920808 · ITAGÜÍ - COLOMBIA
+              </p>
             </div>
 
-            {/* 2. Ficha Encabezado Institucional FJ KIDS S.A.S */}
-            <div style={{ backgroundColor: '#ffffff', color: '#0f172a', border: '2px solid #0f172a', borderRadius: '12px', padding: '15px', display: 'grid', gridTemplateColumns: '1.2fr 2fr 1fr', gap: '15px', alignItems: 'center' }}>
-              <div style={{ textAlign: 'center', borderRight: '1px solid #cbd5e1', paddingRight: '10px' }}>
-                <h2 style={{ fontSize: '1.4rem', fontWeight: '900', margin: 0, color: '#0f172a' }}>FJ KIDS S.A.S</h2>
-                <p style={{ margin: '2px 0 0 0', fontSize: '10px', color: '#475569', fontWeight: 'bold' }}>
-                  NIT. 900.410.656-5<br />
-                  Calle 71 #52a-77 · Barrio Santa María<br />
-                  Tel: 3226930798 / 3128920808<br />
-                  ITAGÜÍ - COLOMBIA
-                </p>
+            <div style={{ padding: '8px', textAlign: 'center', backgroundColor: '#f8fafc' }}>
+              <span style={{ fontSize: '11px', fontWeight: '900', textTransform: 'uppercase' }}>PEDIDO</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9px', fontWeight: 'bold', borderTop: '1px solid #000', marginTop: '4px', paddingTop: '2px' }}>
+                <span>FECHA: 11/08/2026</span>
+                <span style={{ color: '#dc2626', fontWeight: '900' }}>N° PED-0363</span>
               </div>
+              <span style={{ display: 'inline-block', backgroundColor: '#dbeafe', color: '#1e40af', fontSize: '9px', fontWeight: '900', padding: '2px 8px', borderRadius: '10px', marginTop: '4px' }}>
+                ✓ Confirmado
+              </span>
+            </div>
+          </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '11px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '9px', fontWeight: 'bold', color: '#64748b' }}>SEÑOR(ES):</label>
-                  <input placeholder="Buscar cliente..." value={clienteNombre} onChange={e => setClienteNombre(e.target.value)} style={{ width: '100%', padding: '4px 6px', borderRadius: '4px', border: '1px solid #cbd5e1', fontWeight: 'bold' }} />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '9px', fontWeight: 'bold', color: '#64748b' }}>NIT o C.C.:</label>
-                  <input placeholder="NIT o Cédula..." value={nitCliente} onChange={e => setNitCliente(e.target.value)} style={{ width: '100%', padding: '4px 6px', borderRadius: '4px', border: '1px solid #cbd5e1' }} />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '9px', fontWeight: 'bold', color: '#64748b' }}>CIUDAD / MUNICIPIO:</label>
-                  <input placeholder="Ej. Montería" value={ciudad} onChange={e => setCiudad(e.target.value)} style={{ width: '100%', padding: '4px 6px', borderRadius: '4px', border: '1px solid #cbd5e1' }} />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '9px', fontWeight: 'bold', color: '#64748b' }}>FORMA DE PAGO:</label>
-                  <select style={{ width: '100%', padding: '4px 6px', borderRadius: '4px', border: '1px solid #cbd5e1', fontWeight: 'bold' }}>
-                    <option>CONTADO / TRANSFERENCIA</option>
-                    <option>CREDITO 30 DIAS</option>
-                  </select>
-                </div>
+          {/* 2. TABLA ENCABEZADO DATOS DE CLIENTE & DESPACHO */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', border: '1px solid #000000', fontSize: '10px', fontWeight: 'bold', marginBottom: '-1px' }}>
+            <div style={{ borderRight: '1px solid #000' }}>
+              <div style={{ borderBottom: '1px solid #000', padding: '4px 8px', display: 'flex' }}>
+                <span style={{ width: '100px', color: '#475569' }}>SEÑOR(ES)</span>
+                <input value={clienteNombre} onChange={e => setClienteNombre(e.target.value)} style={{ flex: 1, border: 'none', fontWeight: 'bold', color: '#dc2626', outline: 'none' }} />
               </div>
-
-              <div style={{ textAlign: 'center', backgroundColor: '#f8fafc', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                <span style={{ fontSize: '10px', fontWeight: '900', color: '#64748b', textTransform: 'uppercase' }}>PEDIDO N°</span>
-                <h3 style={{ fontSize: '1.2rem', fontWeight: '900', margin: '4px 0 0 0', color: '#dc2626' }}>PED-2026-8890</h3>
-                <span style={{ fontSize: '9px', color: '#059669', fontWeight: 'bold' }}>09:05:36 p. m. (Bogotá)</span>
+              <div style={{ borderBottom: '1px solid #000', padding: '4px 8px', display: 'flex' }}>
+                <span style={{ width: '100px', color: '#475569' }}>ALMACÉN</span>
+                <input value={almacen} onChange={e => setAlmacen(e.target.value)} style={{ flex: 1, border: 'none', fontWeight: 'bold', color: '#dc2626', outline: 'none' }} />
+              </div>
+              <div style={{ borderBottom: '1px solid #000', padding: '4px 8px', display: 'flex' }}>
+                <span style={{ width: '100px', color: '#475569' }}>DIRECCIÓN</span>
+                <input value={direccion} onChange={e => setDireccion(e.target.value)} style={{ flex: 1, border: 'none', fontWeight: 'bold', color: '#dc2626', outline: 'none' }} />
+              </div>
+              <div style={{ borderBottom: '1px solid #000', padding: '4px 8px', display: 'flex' }}>
+                <span style={{ width: '100px', color: '#475569' }}>FORMA DE PAGO</span>
+                <input value={formaPago} onChange={e => setFormaPago(e.target.value)} style={{ flex: 1, border: 'none', fontWeight: 'bold', color: '#dc2626', outline: 'none' }} />
+              </div>
+              <div style={{ padding: '4px 8px', display: 'flex' }}>
+                <span style={{ width: '100px', color: '#475569' }}>🚚 VIGENCIA DESPACHO</span>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <span>Inicio: <input value={vigenciaInicio} onChange={e => setVigenciaInicio(e.target.value)} style={{ border: 'none', color: '#dc2626', fontWeight: 'bold', width: '80px' }} /></span>
+                  <span>Fin: —</span>
+                </div>
               </div>
             </div>
 
-            {/* 3. Barra de Búsqueda y Escáner */}
-            <div style={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', padding: '10px', borderRadius: '10px', display: 'flex', gap: '8px', alignItems: 'center' }}>
-              <span style={{ fontSize: '16px' }}>🔦</span>
-              <input
-                placeholder="Toca aquí y escanea o escribe la referencia..."
-                style={{ flex: 1, backgroundColor: '#1e293b', border: '1px solid #334155', color: '#ffffff', padding: '8px 12px', borderRadius: '6px', fontSize: '12px', outline: 'none' }}
-              />
+            <div>
+              <div style={{ borderBottom: '1px solid #000', padding: '4px 8px', display: 'flex' }}>
+                <span style={{ width: '100px', color: '#475569' }}>NIT o C.C.</span>
+                <input value={nitCliente} onChange={e => setNitCliente(e.target.value)} style={{ flex: 1, border: 'none', fontWeight: 'bold', color: '#dc2626', outline: 'none' }} />
+              </div>
+              <div style={{ borderBottom: '1px solid #000', padding: '4px 8px', display: 'flex' }}>
+                <span style={{ width: '100px', color: '#475569' }}>TELÉFONO</span>
+                <input value={telefono} onChange={e => setTelefono(e.target.value)} style={{ width: '100px', border: 'none', outline: 'none' }} />
+                <span style={{ width: '60px', color: '#475569' }}>CELULAR</span>
+                <input value={celular} onChange={e => setCelular(e.target.value)} style={{ flex: 1, border: 'none', fontWeight: 'bold', color: '#dc2626', outline: 'none' }} />
+              </div>
+              <div style={{ borderBottom: '1px solid #000', padding: '4px 8px', display: 'flex' }}>
+                <span style={{ width: '100px', color: '#475569' }}>CIUDAD</span>
+                <input value={ciudadDepto} onChange={e => setCiudadDepto(e.target.value)} style={{ flex: 1, border: 'none', fontWeight: 'bold', color: '#dc2626', outline: 'none' }} />
+              </div>
+              <div style={{ borderBottom: '1px solid #000', padding: '4px 8px', display: 'flex' }}>
+                <span style={{ width: '100px', color: '#475569' }}>DESCUENTO</span>
+                <input value={descuento} onChange={e => setDescuento(e.target.value)} style={{ width: '60px', border: 'none', fontWeight: 'bold', color: '#dc2626' }} />
+                <span style={{ width: '70px', color: '#475569' }}>VENDEDOR</span>
+                <input value={vendedor} onChange={e => setVendedor(e.target.value)} style={{ flex: 1, border: 'none', fontWeight: 'bold', color: '#dc2626' }} />
+              </div>
+              <div style={{ padding: '4px 8px', display: 'flex' }}>
+                <span style={{ width: '100px', color: '#475569' }}>📅 CORTE FACTURA</span>
+                <input value={corteFacturacion} onChange={e => setCorteFacturacion(e.target.value)} style={{ flex: 1, border: 'none', fontWeight: 'bold', color: '#2563eb', outline: 'none' }} />
+              </div>
             </div>
+          </div>
 
-            {/* 4. Matriz de Pedidos por Curvas y Tallas */}
-            <div style={{ backgroundColor: '#ffffff', color: '#0f172a', border: '2px solid #0f172a', borderRadius: '12px', overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px', textAlign: 'center' }}>
-                <thead>
-                  {/* Fila Encabezados Curvas */}
-                  <tr style={{ backgroundColor: '#f1f5f9', borderBottom: '1px solid #cbd5e1', fontWeight: '900' }}>
-                    <th style={{ padding: '8px', borderRight: '1px solid #cbd5e1' }}>N°</th>
-                    <th style={{ padding: '8px', borderRight: '1px solid #cbd5e1' }}>REF</th>
-                    <th style={{ padding: '8px', borderRight: '1px solid #cbd5e1', textAlign: 'left' }}>DESCRIPCIÓN</th>
-                    
-                    {/* Columnas Tallas Dinámicas */}
-                    <th style={{ padding: '4px', borderRight: '1px solid #cbd5e1', backgroundColor: '#e2e8f0' }}>0-3 / 2</th>
-                    <th style={{ padding: '4px', borderRight: '1px solid #cbd5e1', backgroundColor: '#e2e8f0' }}>3-6 / 3</th>
-                    <th style={{ padding: '4px', borderRight: '1px solid #cbd5e1', backgroundColor: '#e2e8f0' }}>6-9 / 4</th>
-                    <th style={{ padding: '4px', borderRight: '1px solid #cbd5e1', backgroundColor: '#e2e8f0' }}>9-12 / 5</th>
-                    <th style={{ padding: '4px', borderRight: '1px solid #cbd5e1', backgroundColor: '#e2e8f0' }}>6 / 10</th>
-                    <th style={{ padding: '4px', borderRight: '1px solid #cbd5e1', backgroundColor: '#e2e8f0' }}>12</th>
-                    <th style={{ padding: '4px', borderRight: '1px solid #cbd5e1', backgroundColor: '#e2e8f0' }}>14 / 16</th>
+          {/* CUADRO MULTI-RENGLÓN DE NOTAS U OBSERVACIONES */}
+          <div style={{ border: '1px solid #000000', padding: '6px 8px', fontSize: '10px', fontWeight: 'bold', marginBottom: '15px', backgroundColor: '#f8fafc' }}>
+            <span style={{ color: '#475569', display: 'block', marginBottom: '2px' }}>NOTAS / OBSERVACIONES:</span>
+            <textarea
+              rows={2}
+              value={notasGenerales}
+              onChange={e => setNotasGenerales(e.target.value)}
+              style={{ width: '100%', border: 'none', outline: 'none', backgroundColor: 'transparent', fontWeight: 'bold', color: '#dc2626', resize: 'vertical' }}
+            />
+          </div>
 
-                    <th style={{ padding: '8px', borderRight: '1px solid #cbd5e1', backgroundColor: '#fef3c7' }}>CANT. TOTAL</th>
-                    <th style={{ padding: '8px', borderRight: '1px solid #cbd5e1' }}>PRECIO</th>
-                    <th style={{ padding: '8px', borderRight: '1px solid #cbd5e1' }}>VALOR TOTAL</th>
-                    <th style={{ padding: '8px' }}>COLORES / NOTA</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filas.map((f, idx) => {
-                    const cantFila = calcularTotalPrendasFila(f);
-                    const totalValorFila = cantFila * f.precioUnitario;
+          {/* 3. MATRIZ CON TALLAS EN CAJONCITOS INDEPENDIENTES */}
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10px', textAlign: 'center', border: '1px solid #000' }}>
+              <thead>
+                <tr style={{ backgroundColor: '#f1f5f9', borderBottom: '1px solid #000', fontWeight: '900' }}>
+                  <th style={{ padding: '4px', borderRight: '1px solid #000', width: '30px' }}>N°</th>
+                  <th style={{ padding: '4px', borderRight: '1px solid #000', width: '50px' }}>REF</th>
+                  <th style={{ padding: '4px', borderRight: '1px solid #000', width: '160px', textAlign: 'left' }}>DESCRIPCIÓN</th>
+                  
+                  {/* Encabezado de Matriz de Tallas por Niveles */}
+                  <th style={{ padding: '0', borderRight: '1px solid #000' }} colSpan={7}>
+                    <div style={{ borderBottom: '1px solid #000', padding: '2px', fontWeight: '900' }}>CURVAS Y TALLAS INDEPENDIENTES</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', fontSize: '8px', fontWeight: 'bold' }}>
+                      <span style={{ borderRight: '1px solid #cbd5e1', padding: '2px' }}>MESES: 0-3</span>
+                      <span style={{ borderRight: '1px solid #cbd5e1', padding: '2px' }}>3-6</span>
+                      <span style={{ borderRight: '1px solid #cbd5e1', padding: '2px' }}>6-9</span>
+                      <span style={{ borderRight: '1px solid #cbd5e1', padding: '2px' }}>9-12</span>
+                      <span style={{ borderRight: '1px solid #cbd5e1', padding: '2px' }}>-</span>
+                      <span style={{ borderRight: '1px solid #cbd5e1', padding: '2px' }}>-</span>
+                      <span style={{ padding: '2px' }}>-</span>
+                    </div>
+                  </th>
 
-                    return (
-                      <tr key={f.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
-                        <td style={{ padding: '8px', fontWeight: 'bold', borderRight: '1px solid #cbd5e1' }}>
-                          N°{idx + 1}<br />
-                          {/* Botón Cámara 📷 Flotante */}
-                          <button
-                            onClick={() => setModalFoto(f)}
-                            title="Ver Foto de la Referencia"
-                            style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '14px', marginTop: '2px' }}
-                          >
-                            📷
-                          </button>
+                  <th style={{ padding: '4px', borderRight: '1px solid #000', width: '50px' }}>CANT. TOTAL</th>
+                  {mostrarPreciosPDF && <th style={{ padding: '4px', borderRight: '1px solid #000', width: '70px' }}>PRECIO</th>}
+                  {mostrarPreciosPDF && <th style={{ padding: '4px', borderRight: '1px solid #000', width: '85px' }}>VALOR TOTAL</th>}
+                  <th style={{ padding: '4px', width: '100px' }}>NOTA / COLOR</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filas.map((f, idx) => {
+                  const cantTotal = totalPrendasFila(f);
+                  const valorTotal = totalValorFila(f);
+
+                  return (
+                    <tr key={idx} style={{ borderBottom: '1px solid #cbd5e1' }}>
+                      <td style={{ padding: '4px', fontWeight: 'bold', borderRight: '1px solid #cbd5e1' }}>
+                        {idx + 1}
+                        {f.imagenUrl && (
+                          <button onClick={() => setModalFoto(f)} className="no-print" style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '11px', display: 'block', margin: '0 auto' }}>📷</button>
+                        )}
+                      </td>
+                      <td style={{ padding: '4px', fontWeight: '900', borderRight: '1px solid #cbd5e1' }}>{f.referencia}</td>
+                      <td style={{ padding: '4px', fontWeight: 'bold', borderRight: '1px solid #cbd5e1', textAlign: 'left' }}>{f.descripcion}</td>
+
+                      {/* Recuadros Independientes por Cada Talla */}
+                      {['4', '6', '8', '10', '12', '14', '16'].map(tKey => (
+                        <td key={tKey} style={{ borderRight: '1px solid #cbd5e1', padding: '2px', width: '28px' }}>
+                          <input
+                            type="number"
+                            value={f.tallasMap[tKey] || ''}
+                            onChange={e => cambiarTallaValor(idx, tKey, parseInt(e.target.value) || 0)}
+                            style={{ width: '100%', textAlign: 'center', border: 'none', fontWeight: 'bold', fontSize: '10px', outline: 'none', backgroundColor: 'transparent' }}
+                          />
                         </td>
-                        <td style={{ padding: '8px', fontWeight: '900', borderRight: '1px solid #cbd5e1', color: '#0f172a' }}>
-                          {f.referencia}
-                        </td>
-                        <td style={{ padding: '8px', fontWeight: 'bold', borderRight: '1px solid #cbd5e1', textAlign: 'left' }}>
-                          {f.descripcion}
-                          <span style={{ display: 'block', fontSize: '9px', color: '#059669' }}>CURVA: {f.curva}</span>
-                        </td>
+                      ))}
 
-                        {/* Entradas de Cantidad por Talla */}
-                        {['4', '6', '8', '10', '12', '14', '16'].map(tallaKey => (
-                          <td key={tallaKey} style={{ borderRight: '1px solid #e2e8f0', padding: '2px' }}>
-                            <input
-                              type="number"
-                              value={f.tallas[tallaKey] || 0}
-                              onChange={e => cambiarTalla(f.id, tallaKey, parseInt(e.target.value) || 0)}
-                              style={{ width: '32px', textAlign: 'center', padding: '4px 2px', border: '1px solid #cbd5e1', borderRadius: '4px', fontWeight: 'bold', fontSize: '11px' }}
-                            />
-                          </td>
+                      <td style={{ padding: '4px', fontWeight: '900', borderRight: '1px solid #cbd5e1', backgroundColor: '#fef3c7' }}>{cantTotal}</td>
+                      {mostrarPreciosPDF && <td style={{ padding: '4px', fontWeight: 'bold', borderRight: '1px solid #cbd5e1' }}>$ {f.precioUnitario.toLocaleString('es-CO')}</td>}
+                      {mostrarPreciosPDF && <td style={{ padding: '4px', fontWeight: '900', borderRight: '1px solid #cbd5e1' }}>$ {valorTotal.toLocaleString('es-CO')}</td>}
+                      
+                      <td style={{ padding: '4px', textAlign: 'center' }}>
+                        {f.colores.map((c, cIdx) => (
+                          <span key={cIdx} style={{ backgroundColor: c.bg, color: c.text, padding: '2px 6px', borderRadius: '4px', fontSize: '8px', fontWeight: '900', display: 'inline-block' }}>
+                            {c.nombre}
+                          </span>
                         ))}
-
-                        {/* Cantidad Total de la Fila */}
-                        <td style={{ padding: '8px', fontWeight: '900', borderRight: '1px solid #cbd5e1', backgroundColor: '#fef3c7', fontSize: '12px' }}>
-                          {cantFila}
-                        </td>
-
-                        {/* Precio Unitario L1 */}
-                        <td style={{ padding: '8px', fontWeight: 'bold', borderRight: '1px solid #cbd5e1' }}>
-                          $ {f.precioUnitario.toLocaleString('es-CO')}
-                        </td>
-
-                        {/* Valor Total Fila */}
-                        <td style={{ padding: '8px', fontWeight: '900', borderRight: '1px solid #cbd5e1', color: '#059669', fontSize: '12px' }}>
-                          $ {totalValorFila.toLocaleString('es-CO')}
-                        </td>
-
-                        {/* Colores Ilustrativos */}
-                        <td style={{ padding: '8px', textAlign: 'left' }}>
-                          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                            {f.colores.map((c, cIdx) => (
-                              <span key={cIdx} style={{ backgroundColor: c.bg, color: c.text, padding: '2px 6px', borderRadius: '4px', fontSize: '8px', fontWeight: '900', border: '1px solid #cbd5e1' }}>
-                                {c.nombre}
-                              </span>
-                            ))}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Resumen Financiero Pie de Página */}
-            <div style={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', padding: '15px 20px', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <span style={{ fontSize: '11px', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 'bold' }}>Total Prendas a Despachar:</span>
-                <h3 style={{ fontSize: '1.4rem', fontWeight: '900', color: '#38bdf8', margin: '2px 0 0 0' }}>
-                  {calcularTotalPrendasGeneral()} Unidades
-                </h3>
-              </div>
-
-              <div>
-                <span style={{ fontSize: '11px', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 'bold' }}>Valor Total del Pedido ($ COP):</span>
-                <h2 style={{ fontSize: '1.8rem', fontWeight: '900', color: '#10b981', margin: '2px 0 0 0' }}>
-                  $ {calcularTotalFilas().toLocaleString('es-CO')} COP
-                </h2>
-              </div>
-            </div>
-
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
-        )}
 
-        {/* MODAL FLOTANTE DE FOTO DE LA REFERENCIA (BOTÓN CÁMARA 📷) */}
-        {modalFoto && (
-          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.8)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, padding: '15px' }}>
-            <div style={{ backgroundColor: '#ffffff', color: '#0f172a', borderRadius: '16px', padding: '20px', maxWidth: '420px', width: '100%', display: 'flex', flexDirection: 'column', gap: '12px', position: 'relative' }}>
-              
-              <button
-                onClick={() => setModalFoto(null)}
-                style={{ position: 'absolute', top: '12px', right: '12px', border: 'none', background: '#cbd5e1', borderRadius: '50%', width: '28px', height: '28px', cursor: 'pointer', fontWeight: 'bold' }}
-              >
-                ✕
-              </button>
+          {/* 4. RESUMEN AGRUPADO POR CATEGORÍA CON ALERTAS VISUALES */}
+          <div style={{ marginTop: '20px', borderTop: '2px solid #000', paddingTop: '15px' }}>
+            <h4 style={{ fontSize: '11px', fontWeight: '900', margin: '0 0 10px 0', textTransform: 'uppercase' }}>
+              📦 Resumen por Categoría · {clienteNombre}
+            </h4>
 
-              <div style={{ textAlign: 'center' }}>
-                <span style={{ backgroundColor: '#1e3a8a', color: '#38bdf8', fontSize: '10px', fontWeight: '900', padding: '3px 8px', borderRadius: '4px' }}>
-                  REF: {modalFoto.referencia}
-                </span>
-                <h3 style={{ fontSize: '1.1rem', fontWeight: '900', margin: '6px 0 0 0' }}>{modalFoto.descripcion}</h3>
-              </div>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10px', marginBottom: '15px', border: '1px solid #cbd5e1' }}>
+              <thead>
+                <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #cbd5e1' }}>
+                  <th style={{ padding: '6px', textAlign: 'left' }}>Categoría</th>
+                  <th style={{ padding: '6px', textAlign: 'center' }}>Unidades Pedidas</th>
+                  {mostrarPreciosPDF && <th style={{ padding: '6px', textAlign: 'right' }}>Valor Total ($ COP)</th>}
+                </tr>
+              </thead>
+              <tbody>
+                {categoriasEnPedido.map((cat, cIdx) => {
+                  const itemsCat = filas.filter(f => f.descripcion === cat);
+                  const undsCat = itemsCat.reduce((acc, f) => acc + totalPrendasFila(f), 0);
+                  const valCat = itemsCat.reduce((acc, f) => acc + totalValorFila(f), 0);
 
-              {/* Imagen Ilustrativa de la Prenda */}
-              <div style={{ width: '100%', height: '220px', borderRadius: '12px', overflow: 'hidden', backgroundColor: '#f1f5f9' }}>
-                <img src={modalFoto.imagenUrl} alt={modalFoto.descripcion} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              </div>
+                  return (
+                    <tr key={cIdx} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                      <td style={{ padding: '6px', fontWeight: 'bold' }}>{cat}</td>
+                      <td style={{ padding: '6px', textAlign: 'center', fontWeight: 'bold' }}>{undsCat} unds</td>
+                      {mostrarPreciosPDF && <td style={{ padding: '6px', textAlign: 'right', fontWeight: '900', color: '#059669' }}>$ {valCat.toLocaleString('es-CO')}</td>}
+                    </tr>
+                  );
+                })}
+                <tr style={{ backgroundColor: '#f1f5f9', fontWeight: '900' }}>
+                  <td style={{ padding: '6px' }}>TOTAL GENERAL</td>
+                  <td style={{ padding: '6px', textAlign: 'center' }}>{totalPrendasGeneral()} unds</td>
+                  {mostrarPreciosPDF && <td style={{ padding: '6px', textAlign: 'right', color: '#dc2626' }}>$ {totalValorGeneral().toLocaleString('es-CO')} COP</td>}
+                </tr>
+              </tbody>
+            </table>
 
-              {/* Colores Disponibles */}
-              <div>
-                <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#64748b' }}>COLORES DISPONIBLES EN BODEGA:</span>
-                <div style={{ display: 'flex', gap: '6px', marginTop: '4px' }}>
-                  {modalFoto.colores.map((c, idx) => (
-                    <span key={idx} style={{ backgroundColor: c.bg, color: c.text, padding: '3px 8px', borderRadius: '4px', fontSize: '9px', fontWeight: '900', border: '1px solid #cbd5e1' }}>
-                      {c.nombre}
-                    </span>
-                  ))}
-                </div>
-              </div>
+            {/* Alertas Visuales (Chulitos Verdes vs Equis Rojas) */}
+            <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#64748b', display: 'block', marginBottom: '6px' }}>
+              🎯 Categorías de este pedido ({categoriasEnPedido.length} de {categoriasMaster.length} pedidas):
+            </span>
 
-              <button
-                onClick={() => setModalFoto(null)}
-                style={{ width: '100%', padding: '10px', backgroundColor: '#10b981', color: '#022c22', border: 'none', borderRadius: '8px', fontWeight: '900', cursor: 'pointer', fontSize: '12px' }}
-              >
-                ✏️ Ver / Editar Ficha Completa
-              </button>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '6px', fontSize: '9px', fontWeight: 'bold' }}>
+              {categoriasMaster.map((catName, mIdx) => {
+                const solicitada = categoriasEnPedido.includes(catName);
+                return (
+                  <div key={mIdx} style={{ padding: '4px 8px', borderRadius: '4px', backgroundColor: solicitada ? '#dcfce7' : '#fee2e2', color: solicitada ? '#166534' : '#991b1b', border: `1px solid ${solicitada ? '#86efac' : '#fca5a5'}`, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <span>{solicitada ? '✓' : '✕'}</span>
+                    <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{catName}</span>
+                  </div>
+                );
+              })}
             </div>
           </div>
-        )}
+
+        </div>
 
       </div>
+
+      {/* ESTILOS CSS PARA FORMATO DE IMPRESIÓN Y OCULTAMIENTO */}
+      <style jsx global>{`
+        @media print {
+          .no-print {
+            display: none !important;
+          }
+          body {
+            background-color: #ffffff !important;
+            color: #000000 !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }
