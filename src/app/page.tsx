@@ -67,11 +67,11 @@ interface FilaItemPedido {
 
 export default function Home() {
   const [pestana, setPestana] = useState<'NUEVO_PEDIDO' | 'DASHBOARD'>('NUEVO_PEDIDO');
-  // Checkbox: Ocultar únicamente el Valor Total General
+  // Checkbox para Ocultar/Mostrar únicamente el Valor Total General del Pedido
   const [mostrarTotalGeneral, setMostrarTotalGeneral] = useState(true);
   const [mensaje, setMensaje] = useState('');
   
-  // Estado para Modal Flotante de Imagen
+  // Estado para Modal Flotante de Imagen amplio en el centro
   const [modalFoto, setModalFoto] = useState<FilaItemPedido | null>(null);
 
   // Datos Encabezado Pedido
@@ -123,6 +123,10 @@ export default function Home() {
     setFilas(prev => prev.map((f, i) => i === idx ? { ...f, tallasMap: { ...f.tallasMap, [keyTalla]: Math.max(0, val) } } : f));
   };
 
+  const cambiarCurvaFila = (idx: number, nuevaCurva: 'MESES' | 'BEBÉS' | 'JUNIOR' | 'JUVENIL') => {
+    setFilas(prev => prev.map((f, i) => i === idx ? { ...f, curva: nuevaCurva, tallasMap: {} } : f));
+  };
+
   const totalPrendasFila = (f: FilaItemPedido) => Object.values(f.tallasMap).reduce((a, b) => a + (b || 0), 0);
   const totalValorFila = (f: FilaItemPedido) => totalPrendasFila(f) * f.precioUnitario;
 
@@ -137,9 +141,20 @@ export default function Home() {
     setMensaje('🎉 ¡Pedido guardado y PDF generado con éxito!');
   };
 
+  // Columnas Estándar de la Grilla (7 Columnas de Tallas)
+  const columnasTallasMaster = ['col1', 'col2', 'col3', 'col4', 'col5', 'col6', 'col7'];
+
+  // Definición de las Tallas Fijas por Curva
+  const mapaTallasCurva = {
+    MESES: ['0-3', '3-6', '6-9', '9-12', '', '', ''],
+    BEBÉS: ['2', '3', '4', '5', '6', '', ''],
+    JUNIOR: ['4', '6', '8', '10', '12', '14', '16'],
+    JUVENIL: ['18', '20', '22', '24', '', '', '']
+  };
+
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#090d16', color: '#f8fafc', padding: '15px', fontFamily: 'sans-serif' }}>
-      <div style={{ maxWidth: '1300px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '15px' }}>
+      <div style={{ maxWidth: '1350px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '15px' }}>
         
         {/* CONTROLES SUPERIORES */}
         <div className="no-print" style={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', padding: '15px 20px', borderRadius: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
@@ -151,7 +166,7 @@ export default function Home() {
           </div>
 
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-            {/* Chulito para Ocultar/Mostrar únicamente el VALOR TOTAL GENERAL DEL PEDIDO */}
+            {/* Chulito para Ocultar/Mostrar ÚNICAMENTE el Valor Total General del Pedido */}
             <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: 'bold', color: '#fbbf24', cursor: 'pointer', backgroundColor: '#1e293b', padding: '6px 12px', borderRadius: '6px', border: '1px solid #334155' }}>
               <input type="checkbox" checked={mostrarTotalGeneral} onChange={e => setMostrarTotalGeneral(e.target.checked)} />
               💵 Mostrar Valor Total General del Pedido ($ COP)
@@ -278,50 +293,74 @@ export default function Home() {
             />
           </div>
 
-          {/* 3. MATRIZ CON CURVAS EN VERTICAL (IZQUIERDA) Y TALLAS COMPACTAS */}
+          {/* 3. MATRIZ DE TALLAS CON ENCABEZADO VERTICAL FIJO (REPRODUCCIÓN EXACTA DE TU IMAGEN) */}
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10px', textAlign: 'center', border: '1px solid #000' }}>
               <thead>
                 <tr style={{ backgroundColor: '#f1f5f9', borderBottom: '1px solid #000', fontWeight: '900' }}>
-                  <th style={{ padding: '4px', borderRight: '1px solid #000', width: '30px' }}>N°</th>
-                  <th style={{ padding: '4px', borderRight: '1px solid #000', width: '65px' }}>REF</th>
-                  <th style={{ padding: '4px', borderRight: '1px solid #000', width: '150px', textAlign: 'left' }}>DESCRIPCIÓN</th>
+                  <th style={{ padding: '4px', borderRight: '1px solid #000', width: '30px' }} rowSpan={5}>N°</th>
+                  <th style={{ padding: '4px', borderRight: '1px solid #000', width: '65px' }} rowSpan={5}>REF</th>
+                  <th style={{ padding: '4px', borderRight: '1px solid #000', width: '150px', textAlign: 'left' }} rowSpan={5}>DESCRIPCIÓN</th>
                   
-                  {/* BLOQUE CENTRAL: CURVAS VERTICALES + MATRIZ DE TALLAS */}
-                  <th style={{ padding: '0', borderRight: '1px solid #000' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr', height: '100%' }}>
-                      
-                      {/* Curvas Dispuestas Verticalmente (No ocupan espacio horizontal) */}
-                      <div style={{ borderRight: '1px solid #000', backgroundColor: '#e2e8f0', display: 'flex', flexDirection: 'column', justifyContent: 'space-around', fontWeight: '900', fontSize: '8px', padding: '2px 0' }}>
-                        <div style={{ borderBottom: '1px solid #cbd5e1', padding: '1px' }}>MESES</div>
-                        <div style={{ borderBottom: '1px solid #cbd5e1', padding: '1px' }}>BEBÉS</div>
-                        <div style={{ borderBottom: '1px solid #cbd5e1', padding: '1px' }}>JUNIOR</div>
-                        <div style={{ padding: '1px' }}>JUVENIL</div>
-                      </div>
-
-                      {/* Grilla Superior de Tallas */}
-                      <div>
-                        <div style={{ borderBottom: '1px solid #000', padding: '2px', fontWeight: '900', backgroundColor: '#f8fafc' }}>
-                          MATRIZ DE TALLAS INDEPENDIENTES
-                        </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', fontSize: '8px', fontWeight: 'bold' }}>
-                          <span style={{ borderRight: '1px solid #cbd5e1', padding: '2px' }}>0-3 / 2 / 4 / 18</span>
-                          <span style={{ borderRight: '1px solid #cbd5e1', padding: '2px' }}>3-6 / 3 / 6 / 20</span>
-                          <span style={{ borderRight: '1px solid #cbd5e1', padding: '2px' }}>6-9 / 4 / 8 / 22</span>
-                          <span style={{ borderRight: '1px solid #cbd5e1', padding: '2px' }}>9-12 / 5 / 10 / 24</span>
-                          <span style={{ borderRight: '1px solid #cbd5e1', padding: '2px' }}>6 / 12</span>
-                          <span style={{ borderRight: '1px solid #cbd5e1', padding: '2px' }}>14</span>
-                          <span style={{ padding: '2px' }}>16</span>
-                        </div>
-                      </div>
-
+                  {/* BLOQUE CENTRAL CON 4 FILAS VERTICALES DE TALLAS */}
+                  <th style={{ padding: '0', borderRight: '1px solid #000' }} colSpan={8}>
+                    <div style={{ borderBottom: '1px solid #000', padding: '2px', fontWeight: '900', backgroundColor: '#e2e8f0' }}>
+                      MATRIZ DE TALLAS INDEPENDIENTES
                     </div>
                   </th>
 
-                  <th style={{ padding: '4px', borderRight: '1px solid #000', width: '55px' }}>CANT. TOTAL</th>
-                  <th style={{ padding: '4px', borderRight: '1px solid #000', width: '70px' }}>PRECIO</th>
-                  <th style={{ padding: '4px', borderRight: '1px solid #000', width: '85px' }}>VALOR TOTAL</th>
-                  <th style={{ padding: '4px', width: '110px' }}>NOTA / COLOR</th>
+                  <th style={{ padding: '4px', borderRight: '1px solid #000', width: '55px' }} rowSpan={5}>CANT. TOTAL</th>
+                  <th style={{ padding: '4px', borderRight: '1px solid #000', width: '70px' }} rowSpan={5}>PRECIO</th>
+                  <th style={{ padding: '4px', borderRight: '1px solid #000', width: '85px' }} rowSpan={5}>VALOR TOTAL</th>
+                  <th style={{ padding: '4px', width: '110px' }} rowSpan={5}>NOTA / COLOR</th>
+                </tr>
+
+                {/* FILA 1 DE TALLAS EN CABECERA: MESES */}
+                <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #cbd5e1', fontSize: '8px', fontWeight: 'bold' }}>
+                  <th style={{ borderRight: '1px solid #000', padding: '2px', width: '60px', backgroundColor: '#f1f5f9' }}>MESES</th>
+                  <th style={{ borderRight: '1px solid #cbd5e1', padding: '2px', width: '28px' }}>0-3</th>
+                  <th style={{ borderRight: '1px solid #cbd5e1', padding: '2px', width: '28px' }}>3-6</th>
+                  <th style={{ borderRight: '1px solid #cbd5e1', padding: '2px', width: '28px' }}>6-9</th>
+                  <th style={{ borderRight: '1px solid #cbd5e1', padding: '2px', width: '28px' }}>9-12</th>
+                  <th style={{ borderRight: '1px solid #cbd5e1', padding: '2px', width: '28px' }}></th>
+                  <th style={{ borderRight: '1px solid #cbd5e1', padding: '2px', width: '28px' }}></th>
+                  <th style={{ padding: '2px', width: '28px' }}></th>
+                </tr>
+
+                {/* FILA 2 DE TALLAS EN CABECERA: BEBÉS */}
+                <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #cbd5e1', fontSize: '8px', fontWeight: 'bold' }}>
+                  <th style={{ borderRight: '1px solid #000', padding: '2px', width: '60px', backgroundColor: '#f1f5f9' }}>BEBÉS</th>
+                  <th style={{ borderRight: '1px solid #cbd5e1', padding: '2px' }}>2<br/><span style={{ fontSize: '6px', color: '#64748b' }}>6-12</span></th>
+                  <th style={{ borderRight: '1px solid #cbd5e1', padding: '2px' }}>3<br/><span style={{ fontSize: '6px', color: '#64748b' }}>12-18</span></th>
+                  <th style={{ borderRight: '1px solid #cbd5e1', padding: '2px' }}>4<br/><span style={{ fontSize: '6px', color: '#64748b' }}>18-24</span></th>
+                  <th style={{ borderRight: '1px solid #cbd5e1', padding: '2px' }}>5<br/><span style={{ fontSize: '6px', color: '#64748b' }}>24-36</span></th>
+                  <th style={{ borderRight: '1px solid #cbd5e1', padding: '2px' }}>6<br/><span style={{ fontSize: '6px', color: '#64748b' }}>36-48</span></th>
+                  <th style={{ borderRight: '1px solid #cbd5e1', padding: '2px' }}></th>
+                  <th style={{ padding: '2px' }}></th>
+                </tr>
+
+                {/* FILA 3 DE TALLAS EN CABECERA: JUNIOR */}
+                <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #cbd5e1', fontSize: '8px', fontWeight: 'bold' }}>
+                  <th style={{ borderRight: '1px solid #000', padding: '2px', width: '60px', backgroundColor: '#f1f5f9' }}>JUNIOR</th>
+                  <th style={{ borderRight: '1px solid #cbd5e1', padding: '2px' }}>4</th>
+                  <th style={{ borderRight: '1px solid #cbd5e1', padding: '2px' }}>6</th>
+                  <th style={{ borderRight: '1px solid #cbd5e1', padding: '2px' }}>8</th>
+                  <th style={{ borderRight: '1px solid #cbd5e1', padding: '2px' }}>10</th>
+                  <th style={{ borderRight: '1px solid #cbd5e1', padding: '2px' }}>12</th>
+                  <th style={{ borderRight: '1px solid #cbd5e1', padding: '2px' }}>14</th>
+                  <th style={{ padding: '2px' }}>16</th>
+                </tr>
+
+                {/* FILA 4 DE TALLAS EN CABECERA: JUVENIL */}
+                <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #000', fontSize: '8px', fontWeight: 'bold' }}>
+                  <th style={{ borderRight: '1px solid #000', padding: '2px', width: '60px', backgroundColor: '#f1f5f9' }}>JUVENIL</th>
+                  <th style={{ borderRight: '1px solid #cbd5e1', padding: '2px' }}>18</th>
+                  <th style={{ borderRight: '1px solid #cbd5e1', padding: '2px' }}>20</th>
+                  <th style={{ borderRight: '1px solid #cbd5e1', padding: '2px' }}>22</th>
+                  <th style={{ borderRight: '1px solid #cbd5e1', padding: '2px' }}>24</th>
+                  <th style={{ borderRight: '1px solid #cbd5e1', padding: '2px' }}></th>
+                  <th style={{ borderRight: '1px solid #cbd5e1', padding: '2px' }}></th>
+                  <th style={{ padding: '2px' }}></th>
                 </tr>
               </thead>
 
@@ -329,6 +368,7 @@ export default function Home() {
                 {filas.map((f, idx) => {
                   const cantTotal = totalPrendasFila(f);
                   const valorTotal = totalValorFila(f);
+                  const tallasLista = mapaTallasCurva[f.curva];
 
                   return (
                     <tr key={idx} style={{ borderBottom: '1px solid #cbd5e1' }}>
@@ -336,7 +376,7 @@ export default function Home() {
                         {idx + 1}
                       </td>
 
-                      {/* REF CON BOTÓN DE CÁMARA 📷 EMBEBIDO */}
+                      {/* REF CON BOTÓN CÁMARA 📷 EMBEBIDO */}
                       <td style={{ padding: '4px', fontWeight: '900', borderRight: '1px solid #cbd5e1' }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
                           <span>{f.referencia}</span>
@@ -344,7 +384,7 @@ export default function Home() {
                             onClick={() => setModalFoto(f)}
                             className="no-print"
                             title="Toca para ver la foto flotante de la prenda"
-                            style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '12px', padding: 0 }}
+                            style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '11px', padding: 0 }}
                           >
                             📷
                           </button>
@@ -355,32 +395,47 @@ export default function Home() {
                         {f.descripcion}
                       </td>
 
-                      {/* Cajoncitos de Tallas Independientes */}
-                      <td style={{ padding: '0', borderRight: '1px solid #cbd5e1' }}>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', height: '100%' }}>
-                          {['4', '6', '8', '10', '12', '14', '16'].map(tKey => (
-                            <div key={tKey} style={{ borderRight: '1px solid #cbd5e1', padding: '2px' }}>
+                      {/* SELECTOR DE CURVA Y GRILLA DE TALLAS INDEPENDIENTES */}
+                      <td style={{ borderRight: '1px solid #000', padding: '2px', backgroundColor: '#f8fafc' }}>
+                        <select
+                          value={f.curva}
+                          onChange={e => cambiarCurvaFila(idx, e.target.value as any)}
+                          style={{ border: 'none', fontWeight: 'bold', fontSize: '9px', backgroundColor: 'transparent', color: '#1e3a8a' }}
+                        >
+                          <option value="MESES">MESES</option>
+                          <option value="BEBÉS">BEBÉS</option>
+                          <option value="JUNIOR">JUNIOR</option>
+                          <option value="JUVENIL">JUVENIL</option>
+                        </select>
+                      </td>
+
+                      {/* CAJONCITOS INDEPENDIENTES PARA CADA TALLA */}
+                      {columnasTallasMaster.map((_, cIdx) => {
+                        const tName = tallasLista[cIdx];
+                        return (
+                          <td key={cIdx} style={{ borderRight: '1px solid #cbd5e1', padding: '1px', backgroundColor: tName ? '#ffffff' : '#f1f5f9' }}>
+                            {tName ? (
                               <input
                                 type="number"
-                                value={f.tallasMap[tKey] || ''}
-                                onChange={e => cambiarTallaValor(idx, tKey, parseInt(e.target.value) || 0)}
+                                value={f.tallasMap[tName] || ''}
+                                onChange={e => cambiarTallaValor(idx, tName, parseInt(e.target.value) || 0)}
                                 style={{ width: '100%', textAlign: 'center', border: 'none', fontWeight: 'bold', fontSize: '10px', outline: 'none', backgroundColor: 'transparent' }}
                               />
-                            </div>
-                          ))}
-                        </div>
-                      </td>
+                            ) : null}
+                          </td>
+                        );
+                      })}
 
                       <td style={{ padding: '4px', fontWeight: '900', borderRight: '1px solid #cbd5e1', backgroundColor: '#fef3c7' }}>
                         {cantTotal}
                       </td>
 
-                      {/* Precio Unitario SIEMPRE VISIBLE para el Facturador */}
+                      {/* PRECIO UNITARIO SIEMPRE VISIBLE */}
                       <td style={{ padding: '4px', fontWeight: 'bold', borderRight: '1px solid #cbd5e1' }}>
                         $ {f.precioUnitario.toLocaleString('es-CO')}
                       </td>
 
-                      {/* Valor Total por Fila SIEMPRE VISIBLE */}
+                      {/* VALOR TOTAL POR FILA SIEMPRE VISIBLE */}
                       <td style={{ padding: '4px', fontWeight: '900', borderRight: '1px solid #cbd5e1' }}>
                         $ {valorTotal.toLocaleString('es-CO')}
                       </td>
@@ -431,7 +486,7 @@ export default function Home() {
                   <td style={{ padding: '6px' }}>TOTAL GENERAL DE UNIDADES Y VALOR</td>
                   <td style={{ padding: '6px', textAlign: 'center' }}>{totalPrendasGeneral()} unds</td>
                   <td style={{ padding: '6px', textAlign: 'right', color: '#dc2626', fontSize: '12px' }}>
-                    {/* El Checkbox controla ÚNICAMENTE la visibilidad de este monto general */}
+                    {/* El Checkbox controla ÚNICAMENTE la visibilidad del MONTO GENERAL */}
                     {mostrarTotalGeneral ? `$ ${totalValorGeneral().toLocaleString('es-CO')} COP` : '[VALOR TOTAL GENERAL RESERVADO]'}
                   </td>
                 </tr>
