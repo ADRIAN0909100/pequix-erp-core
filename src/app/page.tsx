@@ -42,6 +42,18 @@ const supabase = {
   })
 };
 
+// Base de Datos Geográfica de Colombia
+const geoColombia: { [key: string]: string[] } = {
+  'ANTIOQUIA': ['Itagüí', 'Medellín', 'Bello', 'Envigado', 'Sabaneta', 'Rionegro'],
+  'CÓRDOBA': ['Montería', 'Cereté', 'Sahagún', 'Lorica', 'Planeta Rica'],
+  'SUCRE': ['Sincelejo', 'Corozal', 'San Marcos'],
+  'BOLÍVAR': ['Cartagena', 'Magangué', 'Turbaco'],
+  'ATLÁNTICO': ['Barranquilla', 'Soledad', 'Puerto Colombia'],
+  'BOGOTÁ D.C.': ['Bogotá D.C.'],
+  'VALLE DEL CAUCA': ['Cali', 'Palmira', 'Buenaventura'],
+  'INTERNACIONAL': ['Miami (EE.UU.)', 'Panamá (PA)', 'Quito (EC)']
+};
+
 interface FilaItemPedido {
   num: number;
   referencia: string;
@@ -50,13 +62,12 @@ interface FilaItemPedido {
   tallasMap: { [key: string]: number };
   precioUnitario: number;
   colores: { nombre: string; bg: string; text: string }[];
-  notaPrenda?: string;
   imagenUrl?: string;
 }
 
 export default function Home() {
-  const [pestana, setPestana] = useState<'NUEVO_PEDIDO' | 'RESUMEN' | 'DASHBOARD'>('NUEVO_PEDIDO');
-  const [mostrarPreciosPDF, setMostrarPreciosPDF] = useState(true);
+  const [pestana, setPestana] = useState<'NUEVO_PEDIDO' | 'DASHBOARD'>('NUEVO_PEDIDO');
+  const [mostrarTotalGeneral, setMostrarTotalGeneral] = useState(true);
   const [mensaje, setMensaje] = useState('');
   const [modalFoto, setModalFoto] = useState<FilaItemPedido | null>(null);
 
@@ -67,17 +78,24 @@ export default function Home() {
   const [telefono, setTelefono] = useState('');
   const [celular, setCelular] = useState('3005381816');
   const [direccion, setDireccion] = useState('CL 49 49 22');
-  const [ciudadDepto, setCiudadDepto] = useState('ITAGUI ANTIOQUIA');
+  
+  // Geografía
+  const [deptoSeleccionado, setDeptoSeleccionado] = useState('ANTIOQUIA');
+  const [ciudadSeleccionada, setCiudadSeleccionada] = useState('Itagüí');
+
   const [formaPago, setFormaPago] = useState('30 DÍAS');
   const [descuento, setDescuento] = useState('10%');
   const [vendedor, setVendedor] = useState('ALEJA QUIÑONES');
+
+  // Fechas con Calendario Desplegable Automático
   const [vigenciaInicio, setVigenciaInicio] = useState('2026-08-25');
-  const [corteFacturacion, setCorteFacturacion] = useState('1 al 20 de cada mes');
+  const [vigenciaFin, setVigenciaFin] = useState('');
+  const [corteFacturacion, setCorteFacturacion] = useState('2026-08-20');
   const [notasGenerales, setNotasGenerales] = useState('50/ 50');
 
   // Filas del Pedido B2B
   const [filas, setFilas] = useState<FilaItemPedido[]>([
-    { num: 1, referencia: '6179', descripcion: 'BERMUDA JUNIOR', curva: 'JUNIOR', tallasMap: { '4': 2, '6': 2, '8': 3, '10': 3, '12': 3, '14': 3 }, precioUnitario: 56900, colores: [{ nombre: 'AZUL', bg: '#2563eb', text: '#fff' }], imagenUrl: 'https://images.unsplash.com/photo-1622290291468-a28f7a7dc6a8?w=500&q=80' },
+    { num: 1, referencia: '6179', descripcion: 'BERMUDA JUNIOR', curva: 'JUNIOR', tallasMap: { '4': 2, '6': 2, '8': 3, '10': 3, '12': 3, '14': 3 }, precioUnitario: 56900, colores: [{ nombre: 'AZUL', bg: '#2563eb', text: '#fff' }] },
     { num: 2, referencia: '6180', descripcion: 'BERMUDA JUNIOR', curva: 'JUNIOR', tallasMap: { '4': 2, '6': 2, '8': 3, '10': 4, '12': 4, '14': 4 }, precioUnitario: 56900, colores: [{ nombre: 'AZUL', bg: '#2563eb', text: '#fff' }] },
     { num: 3, referencia: '6181', descripcion: 'BERMUDA JUNIOR', curva: 'JUNIOR', tallasMap: { '4': 2, '6': 2, '8': 3, '10': 4, '12': 4, '14': 4 }, precioUnitario: 56900, colores: [{ nombre: 'AZUL', bg: '#2563eb', text: '#fff' }] },
     { num: 4, referencia: '6182', descripcion: 'BERMUDA JUNIOR', curva: 'JUNIOR', tallasMap: { '4': 2, '6': 2, '8': 6, '10': 6, '12': 6, '14': 6 }, precioUnitario: 56900, colores: [{ nombre: 'AZUL', bg: '#2563eb', text: '#fff' }] },
@@ -88,12 +106,12 @@ export default function Home() {
     { num: 9, referencia: '6185', descripcion: 'BERMUDA JUNIOR', curva: 'JUNIOR', tallasMap: { '4': 2, '6': 2, '8': 6, '10': 6, '12': 6, '14': 6 }, precioUnitario: 56900, colores: [{ nombre: 'AZUL', bg: '#2563eb', text: '#fff' }] }
   ]);
 
-  // Lista Master de Categorías para Alertas Visulaes (Chulitos/Equis)
+  // Lista Master de Categorías
   const categoriasMaster = [
-    'BERMUDA JUNIOR', 'CAMISETA JUNIOR CR', 'CONJUNTO JUNIOR PREMIUM T16', 'JEAN JUNIOR',
-    'BERMUDA BEBE', 'CAMISA BEBE MC', 'CAMISA BEBE ML', 'CAMISA JUNIOR MC',
-    'CAMISA JUNIOR ML', 'CAMISETA BEBE TIPO POLO', 'CAMISETA JUNIOR TIPO POLO', 'CAMISETAS BEBE CR',
-    'CONJUNTO BEBE BASICO', 'CONJUNTO BEBE DORMILON', 'CONJUNTO BEBE PREMIUM', 'CONJUNTO JUNIOR BASICO T16',
+    'BERMUDA JUNIOR', 'BERMUDA BEBE', 'CONJUNTO BEBE DORMILON', 'CONJUNTO BEBE PREMIUM',
+    'CONJUNTO JUNIOR BASICO T16', 'CONJUNTO JUNIOR PREMIUM T16', 'JEAN JUNIOR', 'CAMISETA JUNIOR CR',
+    'CAMISA BEBE MC', 'CAMISA BEBE ML', 'CAMISA JUNIOR MC', 'CAMISA JUNIOR ML',
+    'CAMISETA BEBE TIPO POLO', 'CAMISETA JUNIOR TIPO POLO', 'CAMISETAS BEBE CR', 'CONJUNTO BEBE BASICO',
     'CONJUNTO JUNIOR PREMIUM T12', 'JEAN BEBE', 'PANTALON BEBE', 'PANTALON JUNIOR',
     'TRIO CONJUNTO BEBE PREMIUN ELEGANTE', 'TRIO CONJUNTO JUNIOR PREMIUN DEPORTIVO T-16', 'TRIO CONJUNTO JUNIOR PREMIUN ELEGANTE T-12'
   ];
@@ -108,7 +126,7 @@ export default function Home() {
   const totalPrendasGeneral = () => filas.reduce((acc, f) => acc + totalPrendasFila(f), 0);
   const totalValorGeneral = () => filas.reduce((acc, f) => acc + totalValorFila(f), 0);
 
-  // Agrupación por Categoría
+  // Categorías Presentes en el Pedido
   const categoriasEnPedido = Array.from(new Set(filas.map(f => f.descripcion)));
 
   const guardarYExportarPDF = async () => {
@@ -118,21 +136,22 @@ export default function Home() {
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#090d16', color: '#f8fafc', padding: '15px', fontFamily: 'sans-serif' }}>
-      <div style={{ maxWidth: '1250px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '15px' }}>
+      <div style={{ maxWidth: '1280px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '15px' }}>
         
-        {/* BARRA SUPERIOR DE NAVEGACIÓN Y CONTROLES */}
+        {/* CONTROLES SUPERIORES */}
         <div className="no-print" style={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', padding: '15px 20px', borderRadius: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
           <div>
             <span style={{ backgroundColor: '#10b981', color: '#022c22', fontWeight: '900', fontSize: '10px', padding: '3px 8px', borderRadius: '4px', textTransform: 'uppercase' }}>
-              🟢 PEQUIX ERP CORE · FJ KIDS S.A.S
+              🟢 PEQUIX ERP CORE SAAS · FJ KIDS S.A.S
             </span>
             <h1 style={{ fontSize: '1.2rem', fontWeight: '900', margin: '4px 0 0 0', color: '#ffffff' }}>Módulo B2B Toma de Pedidos & Ficha Oficial</h1>
           </div>
 
-          <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: 'bold', color: '#fbbf24', cursor: 'pointer', backgroundColor: '#1e293b', padding: '6px 10px', borderRadius: '6px', border: '1px solid #334155' }}>
-              <input type="checkbox" checked={mostrarPreciosPDF} onChange={e => setMostrarPreciosPDF(e.target.checked)} />
-              💵 Mostrar Precios $ COP en PDF
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+            {/* Chulito para Ocultar/Mostrar el Valor Total General únicamente */}
+            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: 'bold', color: '#fbbf24', cursor: 'pointer', backgroundColor: '#1e293b', padding: '6px 12px', borderRadius: '6px', border: '1px solid #334155' }}>
+              <input type="checkbox" checked={mostrarTotalGeneral} onChange={e => setMostrarTotalGeneral(e.target.checked)} />
+              💵 Mostrar Valor Total General ($ COP) en PDF
             </label>
 
             <button onClick={guardarYExportarPDF} style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', backgroundColor: '#10b981', color: '#022c22', fontWeight: '900', fontSize: '11px', cursor: 'pointer' }}>
@@ -147,13 +166,13 @@ export default function Home() {
           </div>
         )}
 
-        {/* CONTENEDOR PRINCIPAL DEL PEDIDO (FORMATO OFICIAL IMPRESO) */}
+        {/* CONTENEDOR PRINCIPAL IMPRESO */}
         <div style={{ backgroundColor: '#ffffff', color: '#000000', padding: '20px', borderRadius: '12px', border: '2px solid #000000' }}>
           
-          {/* 1. ENCABEZADO SUPERIOR CON LOGO E INFORMACIÓN LEGAL */}
+          {/* 1. ENCABEZADO INSTITUCIONAL */}
           <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 2.5fr 1.3fr', border: '1px solid #000000', marginBottom: '-1px' }}>
             <div style={{ padding: '10px', borderRight: '1px solid #000000', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-              <h2 style={{ fontSize: '1.5rem', fontWeight: '900', margin: 0, color: '#dc2626' }}>fj kids</h2>
+              <h2 style={{ fontSize: '1.6rem', fontWeight: '900', margin: 0, color: '#dc2626' }}>fj kids</h2>
             </div>
             
             <div style={{ padding: '10px', textAlign: 'center', borderRight: '1px solid #000000' }}>
@@ -194,11 +213,15 @@ export default function Home() {
                 <span style={{ width: '100px', color: '#475569' }}>FORMA DE PAGO</span>
                 <input value={formaPago} onChange={e => setFormaPago(e.target.value)} style={{ flex: 1, border: 'none', fontWeight: 'bold', color: '#dc2626', outline: 'none' }} />
               </div>
-              <div style={{ padding: '4px 8px', display: 'flex' }}>
-                <span style={{ width: '100px', color: '#475569' }}>🚚 VIGENCIA DESPACHO</span>
-                <div style={{ display: 'flex', gap: '10px' }}>
-                  <span>Inicio: <input value={vigenciaInicio} onChange={e => setVigenciaInicio(e.target.value)} style={{ border: 'none', color: '#dc2626', fontWeight: 'bold', width: '80px' }} /></span>
-                  <span>Fin: —</span>
+              
+              {/* Calendario Desplegable para Vigencia de Despacho */}
+              <div style={{ padding: '4px 8px', display: 'flex', alignItems: 'center' }}>
+                <span style={{ width: '110px', color: '#475569' }}>🚚 VIGENCIA DESPACHO</span>
+                <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                  <span>Inicio:</span>
+                  <input type="date" value={vigenciaInicio} onChange={e => setVigenciaInicio(e.target.value)} style={{ border: '1px solid #cbd5e1', borderRadius: '4px', color: '#dc2626', fontWeight: 'bold', padding: '1px 4px', fontSize: '9px' }} />
+                  <span>Fin:</span>
+                  <input type="date" value={vigenciaFin} onChange={e => setVigenciaFin(e.target.value)} style={{ border: '1px solid #cbd5e1', borderRadius: '4px', color: '#dc2626', fontWeight: 'bold', padding: '1px 4px', fontSize: '9px' }} />
                 </div>
               </div>
             </div>
@@ -210,23 +233,33 @@ export default function Home() {
               </div>
               <div style={{ borderBottom: '1px solid #000', padding: '4px 8px', display: 'flex' }}>
                 <span style={{ width: '100px', color: '#475569' }}>TELÉFONO</span>
-                <input value={telefono} onChange={e => setTelefono(e.target.value)} style={{ width: '100px', border: 'none', outline: 'none' }} />
-                <span style={{ width: '60px', color: '#475569' }}>CELULAR</span>
+                <input value={telefono} onChange={e => setTelefono(e.target.value)} style={{ width: '70px', border: 'none', outline: 'none' }} />
+                <span style={{ width: '50px', color: '#475569' }}>CELULAR</span>
                 <input value={celular} onChange={e => setCelular(e.target.value)} style={{ flex: 1, border: 'none', fontWeight: 'bold', color: '#dc2626', outline: 'none' }} />
               </div>
-              <div style={{ borderBottom: '1px solid #000', padding: '4px 8px', display: 'flex' }}>
-                <span style={{ width: '100px', color: '#475569' }}>CIUDAD</span>
-                <input value={ciudadDepto} onChange={e => setCiudadDepto(e.target.value)} style={{ flex: 1, border: 'none', fontWeight: 'bold', color: '#dc2626', outline: 'none' }} />
+
+              {/* Selector de Departamento y Ciudad */}
+              <div style={{ borderBottom: '1px solid #000', padding: '4px 8px', display: 'flex', gap: '6px' }}>
+                <span style={{ width: '100px', color: '#475569' }}>UBICACIÓN</span>
+                <select value={deptoSeleccionado} onChange={e => { setDeptoSeleccionado(e.target.value); setCiudadSeleccionada(geoColombia[e.target.value][0]); }} style={{ border: 'none', fontWeight: 'bold', color: '#dc2626', fontSize: '10px' }}>
+                  {Object.keys(geoColombia).map(d => <option key={d} value={d}>{d}</option>)}
+                </select>
+                <select value={ciudadSeleccionada} onChange={e => setCiudadSeleccionada(e.target.value)} style={{ border: 'none', fontWeight: 'bold', color: '#dc2626', fontSize: '10px' }}>
+                  {geoColombia[deptoSeleccionado]?.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
               </div>
+
               <div style={{ borderBottom: '1px solid #000', padding: '4px 8px', display: 'flex' }}>
                 <span style={{ width: '100px', color: '#475569' }}>DESCUENTO</span>
-                <input value={descuento} onChange={e => setDescuento(e.target.value)} style={{ width: '60px', border: 'none', fontWeight: 'bold', color: '#dc2626' }} />
-                <span style={{ width: '70px', color: '#475569' }}>VENDEDOR</span>
+                <input value={descuento} onChange={e => setDescuento(e.target.value)} style={{ width: '50px', border: 'none', fontWeight: 'bold', color: '#dc2626' }} />
+                <span style={{ width: '60px', color: '#475569' }}>VENDEDOR</span>
                 <input value={vendedor} onChange={e => setVendedor(e.target.value)} style={{ flex: 1, border: 'none', fontWeight: 'bold', color: '#dc2626' }} />
               </div>
-              <div style={{ padding: '4px 8px', display: 'flex' }}>
-                <span style={{ width: '100px', color: '#475569' }}>📅 CORTE FACTURA</span>
-                <input value={corteFacturacion} onChange={e => setCorteFacturacion(e.target.value)} style={{ flex: 1, border: 'none', fontWeight: 'bold', color: '#2563eb', outline: 'none' }} />
+
+              {/* Calendario Desplegable para Corte de Facturación */}
+              <div style={{ padding: '4px 8px', display: 'flex', alignItems: 'center' }}>
+                <span style={{ width: '110px', color: '#475569' }}>📅 CORTE FACTURA</span>
+                <input type="date" value={corteFacturacion} onChange={e => setCorteFacturacion(e.target.value)} style={{ border: '1px solid #cbd5e1', borderRadius: '4px', color: '#2563eb', fontWeight: 'bold', padding: '1px 4px', fontSize: '9px' }} />
               </div>
             </div>
           </div>
@@ -242,35 +275,53 @@ export default function Home() {
             />
           </div>
 
-          {/* 3. MATRIZ CON TALLAS EN CAJONCITOS INDEPENDIENTES */}
+          {/* 3. MATRIZ DE TALLAS MILIMÉTRICA CON CAJONCITOS INDEPENDIENTES */}
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10px', textAlign: 'center', border: '1px solid #000' }}>
               <thead>
+                {/* Encabezado Fila 1: Grupos de Curvas */}
                 <tr style={{ backgroundColor: '#f1f5f9', borderBottom: '1px solid #000', fontWeight: '900' }}>
-                  <th style={{ padding: '4px', borderRight: '1px solid #000', width: '30px' }}>N°</th>
-                  <th style={{ padding: '4px', borderRight: '1px solid #000', width: '50px' }}>REF</th>
-                  <th style={{ padding: '4px', borderRight: '1px solid #000', width: '160px', textAlign: 'left' }}>DESCRIPCIÓN</th>
+                  <th style={{ padding: '4px', borderRight: '1px solid #000', width: '30px' }} rowSpan={2}>N°</th>
+                  <th style={{ padding: '4px', borderRight: '1px solid #000', width: '50px' }} rowSpan={2}>REF</th>
+                  <th style={{ padding: '4px', borderRight: '1px solid #000', width: '160px', textAlign: 'left' }} rowSpan={2}>DESCRIPCIÓN</th>
                   
-                  {/* Encabezado de Matriz de Tallas por Niveles */}
-                  <th style={{ padding: '0', borderRight: '1px solid #000' }} colSpan={7}>
-                    <div style={{ borderBottom: '1px solid #000', padding: '2px', fontWeight: '900' }}>CURVAS Y TALLAS INDEPENDIENTES</div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', fontSize: '8px', fontWeight: 'bold' }}>
-                      <span style={{ borderRight: '1px solid #cbd5e1', padding: '2px' }}>MESES: 0-3</span>
-                      <span style={{ borderRight: '1px solid #cbd5e1', padding: '2px' }}>3-6</span>
-                      <span style={{ borderRight: '1px solid #cbd5e1', padding: '2px' }}>6-9</span>
-                      <span style={{ borderRight: '1px solid #cbd5e1', padding: '2px' }}>9-12</span>
-                      <span style={{ borderRight: '1px solid #cbd5e1', padding: '2px' }}>-</span>
-                      <span style={{ borderRight: '1px solid #cbd5e1', padding: '2px' }}>-</span>
-                      <span style={{ padding: '2px' }}>-</span>
-                    </div>
-                  </th>
+                  {/* Encabezados de Curva por Fila Nivelada */}
+                  <th style={{ padding: '2px', borderRight: '1px solid #000', borderBottom: '1px solid #000' }} colSpan={4}>MESES</th>
+                  <th style={{ padding: '2px', borderRight: '1px solid #000', borderBottom: '1px solid #000' }} colSpan={5}>BEBÉS (EXPLORADOR)</th>
+                  <th style={{ padding: '2px', borderRight: '1px solid #000', borderBottom: '1px solid #000' }} colSpan={7}>JUNIOR</th>
 
-                  <th style={{ padding: '4px', borderRight: '1px solid #000', width: '50px' }}>CANT. TOTAL</th>
-                  {mostrarPreciosPDF && <th style={{ padding: '4px', borderRight: '1px solid #000', width: '70px' }}>PRECIO</th>}
-                  {mostrarPreciosPDF && <th style={{ padding: '4px', borderRight: '1px solid #000', width: '85px' }}>VALOR TOTAL</th>}
-                  <th style={{ padding: '4px', width: '100px' }}>NOTA / COLOR</th>
+                  <th style={{ padding: '4px', borderRight: '1px solid #000', width: '50px' }} rowSpan={2}>CANT. TOTAL</th>
+                  <th style={{ padding: '4px', borderRight: '1px solid #000', width: '70px' }} rowSpan={2}>PRECIO</th>
+                  <th style={{ padding: '4px', borderRight: '1px solid #000', width: '85px' }} rowSpan={2}>VALOR TOTAL</th>
+                  <th style={{ padding: '4px', width: '100px' }} rowSpan={2}>NOTA / COLOR</th>
+                </tr>
+
+                {/* Encabezado Fila 2: Cajoncitos de Tallas Independientes */}
+                <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #000', fontSize: '8px', fontWeight: 'bold' }}>
+                  {/* MESES */}
+                  <th style={{ borderRight: '1px solid #cbd5e1', padding: '2px', width: '22px' }}>0-3</th>
+                  <th style={{ borderRight: '1px solid #cbd5e1', padding: '2px', width: '22px' }}>3-6</th>
+                  <th style={{ borderRight: '1px solid #cbd5e1', padding: '2px', width: '22px' }}>6-9</th>
+                  <th style={{ borderRight: '1px solid #000', padding: '2px', width: '22px' }}>9-12</th>
+
+                  {/* BEBÉS (2=6-12, 3=12-18, 4=18-24, 5=24-36, 6=36-48) */}
+                  <th style={{ borderRight: '1px solid #cbd5e1', padding: '2px', width: '22px' }}>2</th>
+                  <th style={{ borderRight: '1px solid #cbd5e1', padding: '2px', width: '22px' }}>3</th>
+                  <th style={{ borderRight: '1px solid #cbd5e1', padding: '2px', width: '22px' }}>4</th>
+                  <th style={{ borderRight: '1px solid #cbd5e1', padding: '2px', width: '22px' }}>5</th>
+                  <th style={{ borderRight: '1px solid #000', padding: '2px', width: '22px' }}>6</th>
+
+                  {/* JUNIOR */}
+                  <th style={{ borderRight: '1px solid #cbd5e1', padding: '2px', width: '22px' }}>4</th>
+                  <th style={{ borderRight: '1px solid #cbd5e1', padding: '2px', width: '22px' }}>6</th>
+                  <th style={{ borderRight: '1px solid #cbd5e1', padding: '2px', width: '22px' }}>8</th>
+                  <th style={{ borderRight: '1px solid #cbd5e1', padding: '2px', width: '22px' }}>10</th>
+                  <th style={{ borderRight: '1px solid #cbd5e1', padding: '2px', width: '22px' }}>12</th>
+                  <th style={{ borderRight: '1px solid #cbd5e1', padding: '2px', width: '22px' }}>14</th>
+                  <th style={{ borderRight: '1px solid #000', padding: '2px', width: '22px' }}>16</th>
                 </tr>
               </thead>
+
               <tbody>
                 {filas.map((f, idx) => {
                   const cantTotal = totalPrendasFila(f);
@@ -287,9 +338,9 @@ export default function Home() {
                       <td style={{ padding: '4px', fontWeight: '900', borderRight: '1px solid #cbd5e1' }}>{f.referencia}</td>
                       <td style={{ padding: '4px', fontWeight: 'bold', borderRight: '1px solid #cbd5e1', textAlign: 'left' }}>{f.descripcion}</td>
 
-                      {/* Recuadros Independientes por Cada Talla */}
-                      {['4', '6', '8', '10', '12', '14', '16'].map(tKey => (
-                        <td key={tKey} style={{ borderRight: '1px solid #cbd5e1', padding: '2px', width: '28px' }}>
+                      {/* Recuadros Independientes de Tallas */}
+                      {['0-3', '3-6', '6-9', '9-12', '2', '3', '4_B', '5', '6_B', '4', '6', '8', '10', '12', '14', '16'].map(tKey => (
+                        <td key={tKey} style={{ borderRight: '1px solid #cbd5e1', padding: '1px' }}>
                           <input
                             type="number"
                             value={f.tallasMap[tKey] || ''}
@@ -300,8 +351,8 @@ export default function Home() {
                       ))}
 
                       <td style={{ padding: '4px', fontWeight: '900', borderRight: '1px solid #cbd5e1', backgroundColor: '#fef3c7' }}>{cantTotal}</td>
-                      {mostrarPreciosPDF && <td style={{ padding: '4px', fontWeight: 'bold', borderRight: '1px solid #cbd5e1' }}>$ {f.precioUnitario.toLocaleString('es-CO')}</td>}
-                      {mostrarPreciosPDF && <td style={{ padding: '4px', fontWeight: '900', borderRight: '1px solid #cbd5e1' }}>$ {valorTotal.toLocaleString('es-CO')}</td>}
+                      <td style={{ padding: '4px', fontWeight: 'bold', borderRight: '1px solid #cbd5e1' }}>$ {f.precioUnitario.toLocaleString('es-CO')}</td>
+                      <td style={{ padding: '4px', fontWeight: '900', borderRight: '1px solid #cbd5e1' }}>$ {valorTotal.toLocaleString('es-CO')}</td>
                       
                       <td style={{ padding: '4px', textAlign: 'center' }}>
                         {f.colores.map((c, cIdx) => (
@@ -317,7 +368,7 @@ export default function Home() {
             </table>
           </div>
 
-          {/* 4. RESUMEN AGRUPADO POR CATEGORÍA CON ALERTAS VISUALES */}
+          {/* 4. RESUMEN AGRUPADO POR CATEGORÍA CON ALERTAS VISUALES Y CANTIDADES */}
           <div style={{ marginTop: '20px', borderTop: '2px solid #000', paddingTop: '15px' }}>
             <h4 style={{ fontSize: '11px', fontWeight: '900', margin: '0 0 10px 0', textTransform: 'uppercase' }}>
               📦 Resumen por Categoría · {clienteNombre}
@@ -328,7 +379,7 @@ export default function Home() {
                 <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #cbd5e1' }}>
                   <th style={{ padding: '6px', textAlign: 'left' }}>Categoría</th>
                   <th style={{ padding: '6px', textAlign: 'center' }}>Unidades Pedidas</th>
-                  {mostrarPreciosPDF && <th style={{ padding: '6px', textAlign: 'right' }}>Valor Total ($ COP)</th>}
+                  <th style={{ padding: '6px', textAlign: 'right' }}>Valor Total ($ COP)</th>
                 </tr>
               </thead>
               <tbody>
@@ -341,30 +392,37 @@ export default function Home() {
                     <tr key={cIdx} style={{ borderBottom: '1px solid #e2e8f0' }}>
                       <td style={{ padding: '6px', fontWeight: 'bold' }}>{cat}</td>
                       <td style={{ padding: '6px', textAlign: 'center', fontWeight: 'bold' }}>{undsCat} unds</td>
-                      {mostrarPreciosPDF && <td style={{ padding: '6px', textAlign: 'right', fontWeight: '900', color: '#059669' }}>$ {valCat.toLocaleString('es-CO')}</td>}
+                      <td style={{ padding: '6px', textAlign: 'right', fontWeight: '900', color: '#059669' }}>$ {valCat.toLocaleString('es-CO')}</td>
                     </tr>
                   );
                 })}
                 <tr style={{ backgroundColor: '#f1f5f9', fontWeight: '900' }}>
                   <td style={{ padding: '6px' }}>TOTAL GENERAL</td>
                   <td style={{ padding: '6px', textAlign: 'center' }}>{totalPrendasGeneral()} unds</td>
-                  {mostrarPreciosPDF && <td style={{ padding: '6px', textAlign: 'right', color: '#dc2626' }}>$ {totalValorGeneral().toLocaleString('es-CO')} COP</td>}
+                  <td style={{ padding: '6px', textAlign: 'right', color: '#dc2626', fontSize: '12px' }}>
+                    {mostrarTotalGeneral ? `$ ${totalValorGeneral().toLocaleString('es-CO')} COP` : '[VALOR RESERVADO POR CHULITO]'}
+                  </td>
                 </tr>
               </tbody>
             </table>
 
-            {/* Alertas Visuales (Chulitos Verdes vs Equis Rojas) */}
+            {/* Alertas Visuales con Unidades Exactas Pedidas */}
             <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#64748b', display: 'block', marginBottom: '6px' }}>
               🎯 Categorías de este pedido ({categoriasEnPedido.length} de {categoriasMaster.length} pedidas):
             </span>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '6px', fontSize: '9px', fontWeight: 'bold' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))', gap: '6px', fontSize: '9px', fontWeight: 'bold' }}>
               {categoriasMaster.map((catName, mIdx) => {
                 const solicitada = categoriasEnPedido.includes(catName);
+                const itemsCat = filas.filter(f => f.descripcion === catName);
+                const undsCat = itemsCat.reduce((acc, f) => acc + totalPrendasFila(f), 0);
+
                 return (
-                  <div key={mIdx} style={{ padding: '4px 8px', borderRadius: '4px', backgroundColor: solicitada ? '#dcfce7' : '#fee2e2', color: solicitada ? '#166534' : '#991b1b', border: `1px solid ${solicitada ? '#86efac' : '#fca5a5'}`, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <span>{solicitada ? '✓' : '✕'}</span>
-                    <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{catName}</span>
+                  <div key={mIdx} style={{ padding: '4px 8px', borderRadius: '4px', backgroundColor: solicitada ? '#dcfce7' : '#fee2e2', color: solicitada ? '#166534' : '#991b1b', border: `1px solid ${solicitada ? '#86efac' : '#fca5a5'}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                      {solicitada ? '✓' : '✕'} {catName}
+                    </span>
+                    {solicitada && <span style={{ backgroundColor: '#166534', color: '#ffffff', padding: '1px 5px', borderRadius: '4px', fontSize: '8px' }}>{undsCat} unds</span>}
                   </div>
                 );
               })}
@@ -375,7 +433,7 @@ export default function Home() {
 
       </div>
 
-      {/* ESTILOS CSS PARA FORMATO DE IMPRESIÓN Y OCULTAMIENTO */}
+      {/* ESTILOS DE IMPRESIÓN */}
       <style jsx global>{`
         @media print {
           .no-print {
