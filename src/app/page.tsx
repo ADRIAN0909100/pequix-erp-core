@@ -156,7 +156,7 @@ export default function Home() {
     <div style={{ minHeight: '100vh', backgroundColor: '#090d16', color: '#f8fafc', padding: '15px', fontFamily: 'sans-serif' }}>
       <div style={{ maxWidth: '1350px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '15px' }}>
         
-        {/* CONTROLES SUPERIORES */}
+        {/* CONTROLES SUPERIORES (EXCLUIDOS EN IMPRESIÓN/PDF) */}
         <div className="no-print" style={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', padding: '15px 20px', borderRadius: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
           <div>
             <span style={{ backgroundColor: '#10b981', color: '#022c22', fontWeight: '900', fontSize: '10px', padding: '3px 8px', borderRadius: '4px', textTransform: 'uppercase' }}>
@@ -166,7 +166,7 @@ export default function Home() {
           </div>
 
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-            {/* Chulito para Ocultar/Mostrar ÚNICAMENTE el Valor Total General del Pedido */}
+            {/* Chulito para Ocultar/Mostrar únicamente el Valor Total General del Pedido */}
             <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: 'bold', color: '#fbbf24', cursor: 'pointer', backgroundColor: '#1e293b', padding: '6px 12px', borderRadius: '6px', border: '1px solid #334155' }}>
               <input type="checkbox" checked={mostrarTotalGeneral} onChange={e => setMostrarTotalGeneral(e.target.checked)} />
               💵 Mostrar Valor Total General del Pedido ($ COP)
@@ -185,15 +185,15 @@ export default function Home() {
         )}
 
         {/* CONTENEDOR PRINCIPAL IMPRESO */}
-        <div style={{ backgroundColor: '#ffffff', color: '#000000', padding: '20px', borderRadius: '12px', border: '2px solid #000000' }}>
+        <div id="hoja-pedido-oficial" style={{ backgroundColor: '#ffffff', color: '#000000', padding: '20px', borderRadius: '12px', border: '2px solid #000000', boxSizing: 'border-box' }}>
           
           {/* 1. ENCABEZADO INSTITUCIONAL */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 2.5fr 1.3fr', border: '1px solid #000000', marginBottom: '-1px' }}>
-            <div style={{ padding: '10px', borderRight: '1px solid #000000', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 2.5fr 1.3fr', border: '2px solid #000000', marginBottom: '-2px', boxSizing: 'border-box' }}>
+            <div style={{ padding: '10px', borderRight: '2px solid #000000', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
               <h2 style={{ fontSize: '1.6rem', fontWeight: '900', margin: 0, color: '#dc2626' }}>fj kids</h2>
             </div>
             
-            <div style={{ padding: '10px', textAlign: 'center', borderRight: '1px solid #000000' }}>
+            <div style={{ padding: '10px', textAlign: 'center', borderRight: '2px solid #000000' }}>
               <h3 style={{ fontSize: '1.2rem', fontWeight: '900', margin: 0 }}>FJ KIDS S.A.S</h3>
               <p style={{ margin: '2px 0 0 0', fontSize: '10px', fontWeight: 'bold' }}>
                 NIT. 900.410.656-5 · Calle 71 #52a-77 · Tel: 3128920808 / Cel: 3128920808 · ITAGÜÍ - COLOMBIA
@@ -201,8 +201,8 @@ export default function Home() {
             </div>
 
             <div style={{ padding: '8px', textAlign: 'center', backgroundColor: '#f8fafc' }}>
-              <span style={{ fontSize: '11px', fontWeight: '900', textTransform: 'uppercase' }}>PEDIDO</span>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9px', fontWeight: 'bold', borderTop: '1px solid #000', marginTop: '4px', paddingTop: '2px' }}>
+              <span style={{ fontSize: '11px', fontWeight: '900', textTransform: 'uppercase' }}>📋 PEDIDO</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9px', fontWeight: 'bold', borderTop: '2px solid #000', marginTop: '4px', paddingTop: '2px' }}>
                 <span>FECHA: 11/08/2026</span>
                 <span style={{ color: '#dc2626', fontWeight: '900' }}>N° PED-0363</span>
               </div>
@@ -212,79 +212,79 @@ export default function Home() {
             </div>
           </div>
 
-          {/* 2. TABLA ENCABEZADO DATOS DE CLIENTE & DESPACHO */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', border: '1px solid #000000', fontSize: '10px', fontWeight: 'bold', marginBottom: '-1px' }}>
-            <div style={{ borderRight: '1px solid #000' }}>
-              <div style={{ borderBottom: '1px solid #000', padding: '4px 8px', display: 'flex' }}>
-                <span style={{ width: '100px', color: '#475569' }}>SEÑOR(ES)</span>
-                <input value={clienteNombre} onChange={e => setClienteNombre(e.target.value)} style={{ flex: 1, border: 'none', fontWeight: 'bold', color: '#dc2626', outline: 'none' }} />
+          {/* 2. TABLA ENCABEZADO DATOS DE CLIENTE & DESPACHO CON BORDES DEFINIDOS Y EMOJIS */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', border: '2px solid #000000', fontSize: '10px', fontWeight: 'bold', marginBottom: '-2px', boxSizing: 'border-box', overflow: 'hidden' }}>
+            <div style={{ borderRight: '2px solid #000000', boxSizing: 'border-box' }}>
+              <div style={{ borderBottom: '2px solid #000000', padding: '4px 8px', display: 'flex', alignItems: 'center' }}>
+                <span style={{ width: '110px', color: '#000000' }}>👤 SEÑOR(ES)</span>
+                <input value={clienteNombre} onChange={e => setClienteNombre(e.target.value)} style={{ flex: 1, border: 'none', fontWeight: 'bold', color: '#dc2626', outline: 'none', width: '100%', boxSizing: 'border-box' }} />
               </div>
-              <div style={{ borderBottom: '1px solid #000', padding: '4px 8px', display: 'flex' }}>
-                <span style={{ width: '100px', color: '#475569' }}>ALMACÉN</span>
-                <input value={almacen} onChange={e => setAlmacen(e.target.value)} style={{ flex: 1, border: 'none', fontWeight: 'bold', color: '#dc2626', outline: 'none' }} />
+              <div style={{ borderBottom: '2px solid #000000', padding: '4px 8px', display: 'flex', alignItems: 'center' }}>
+                <span style={{ width: '110px', color: '#000000' }}>🏪 ALMACÉN</span>
+                <input value={almacen} onChange={e => setAlmacen(e.target.value)} style={{ flex: 1, border: 'none', fontWeight: 'bold', color: '#dc2626', outline: 'none', width: '100%', boxSizing: 'border-box' }} />
               </div>
-              <div style={{ borderBottom: '1px solid #000', padding: '4px 8px', display: 'flex' }}>
-                <span style={{ width: '100px', color: '#475569' }}>DIRECCIÓN</span>
-                <input value={direccion} onChange={e => setDireccion(e.target.value)} style={{ flex: 1, border: 'none', fontWeight: 'bold', color: '#dc2626', outline: 'none' }} />
+              <div style={{ borderBottom: '2px solid #000000', padding: '4px 8px', display: 'flex', alignItems: 'center' }}>
+                <span style={{ width: '110px', color: '#000000' }}>📍 DIRECCIÓN</span>
+                <input value={direccion} onChange={e => setDireccion(e.target.value)} style={{ flex: 1, border: 'none', fontWeight: 'bold', color: '#dc2626', outline: 'none', width: '100%', boxSizing: 'border-box' }} />
               </div>
-              <div style={{ borderBottom: '1px solid #000', padding: '4px 8px', display: 'flex' }}>
-                <span style={{ width: '100px', color: '#475569' }}>FORMA DE PAGO</span>
-                <input value={formaPago} onChange={e => setFormaPago(e.target.value)} style={{ flex: 1, border: 'none', fontWeight: 'bold', color: '#dc2626', outline: 'none' }} />
+              <div style={{ borderBottom: '2px solid #000000', padding: '4px 8px', display: 'flex', alignItems: 'center' }}>
+                <span style={{ width: '110px', color: '#000000' }}>💳 FORMA DE PAGO</span>
+                <input value={formaPago} onChange={e => setFormaPago(e.target.value)} style={{ flex: 1, border: 'none', fontWeight: 'bold', color: '#dc2626', outline: 'none', width: '100%', boxSizing: 'border-box' }} />
               </div>
               
               {/* Calendario Desplegable para Vigencia de Despacho */}
               <div style={{ padding: '4px 8px', display: 'flex', alignItems: 'center' }}>
-                <span style={{ width: '110px', color: '#475569' }}>🚚 VIGENCIA DESPACHO</span>
-                <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                <span style={{ width: '110px', color: '#000000' }}>🚚 VIGENCIA DESPACHO</span>
+                <div style={{ display: 'flex', gap: '4px', alignItems: 'center', flex: 1 }}>
                   <span>Inicio:</span>
-                  <input type="date" value={vigenciaInicio} onChange={e => setVigenciaInicio(e.target.value)} style={{ border: '1px solid #cbd5e1', borderRadius: '4px', color: '#dc2626', fontWeight: 'bold', padding: '1px 4px', fontSize: '9px' }} />
+                  <input type="date" value={vigenciaInicio} onChange={e => setVigenciaInicio(e.target.value)} style={{ border: '1px solid #000000', borderRadius: '4px', color: '#dc2626', fontWeight: 'bold', padding: '1px 4px', fontSize: '9px', outline: 'none' }} />
                   <span>Fin:</span>
-                  <input type="date" value={vigenciaFin} onChange={e => setVigenciaFin(e.target.value)} style={{ border: '1px solid #cbd5e1', borderRadius: '4px', color: '#dc2626', fontWeight: 'bold', padding: '1px 4px', fontSize: '9px' }} />
+                  <input type="date" value={vigenciaFin} onChange={e => setVigenciaFin(e.target.value)} style={{ border: '1px solid #000000', borderRadius: '4px', color: '#dc2626', fontWeight: 'bold', padding: '1px 4px', fontSize: '9px', outline: 'none' }} />
                 </div>
               </div>
             </div>
 
-            <div>
-              <div style={{ borderBottom: '1px solid #000', padding: '4px 8px', display: 'flex' }}>
-                <span style={{ width: '100px', color: '#475569' }}>NIT o C.C.</span>
-                <input value={nitCliente} onChange={e => setNitCliente(e.target.value)} style={{ flex: 1, border: 'none', fontWeight: 'bold', color: '#dc2626', outline: 'none' }} />
+            <div style={{ boxSizing: 'border-box' }}>
+              <div style={{ borderBottom: '2px solid #000000', padding: '4px 8px', display: 'flex', alignItems: 'center' }}>
+                <span style={{ width: '100px', color: '#000000' }}>🆔 NIT o C.C.</span>
+                <input value={nitCliente} onChange={e => setNitCliente(e.target.value)} style={{ flex: 1, border: 'none', fontWeight: 'bold', color: '#dc2626', outline: 'none', width: '100%', boxSizing: 'border-box' }} />
               </div>
-              <div style={{ borderBottom: '1px solid #000', padding: '4px 8px', display: 'flex' }}>
-                <span style={{ width: '100px', color: '#475569' }}>TELÉFONO</span>
-                <input value={telefono} onChange={e => setTelefono(e.target.value)} style={{ width: '70px', border: 'none', outline: 'none' }} />
-                <span style={{ width: '50px', color: '#475569' }}>CELULAR</span>
-                <input value={celular} onChange={e => setCelular(e.target.value)} style={{ flex: 1, border: 'none', fontWeight: 'bold', color: '#dc2626', outline: 'none' }} />
+              <div style={{ borderBottom: '2px solid #000000', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <span style={{ width: '80px', color: '#000000' }}>📞 TELÉFONO</span>
+                <input value={telefono} onChange={e => setTelefono(e.target.value)} style={{ width: '60px', border: 'none', outline: 'none' }} />
+                <span style={{ width: '70px', color: '#000000' }}>📱 CELULAR</span>
+                <input value={celular} onChange={e => setCelular(e.target.value)} style={{ flex: 1, border: 'none', fontWeight: 'bold', color: '#dc2626', outline: 'none', width: '100%', boxSizing: 'border-box' }} />
               </div>
 
               {/* Selector de Ubicación */}
-              <div style={{ borderBottom: '1px solid #000', padding: '4px 8px', display: 'flex', gap: '6px' }}>
-                <span style={{ width: '100px', color: '#475569' }}>UBICACIÓN</span>
-                <select value={deptoSeleccionado} onChange={e => { setDeptoSeleccionado(e.target.value); setCiudadSeleccionada(geoColombia[e.target.value][0]); }} style={{ border: 'none', fontWeight: 'bold', color: '#dc2626', fontSize: '10px' }}>
+              <div style={{ borderBottom: '2px solid #000000', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <span style={{ width: '100px', color: '#000000' }}>🗺️ UBICACIÓN</span>
+                <select value={deptoSeleccionado} onChange={e => { setDeptoSeleccionado(e.target.value); setCiudadSeleccionada(geoColombia[e.target.value][0]); }} style={{ border: 'none', fontWeight: 'bold', color: '#dc2626', fontSize: '10px', outline: 'none' }}>
                   {Object.keys(geoColombia).map(d => <option key={d} value={d}>{d}</option>)}
                 </select>
-                <select value={ciudadSeleccionada} onChange={e => setCiudadSeleccionada(e.target.value)} style={{ border: 'none', fontWeight: 'bold', color: '#dc2626', fontSize: '10px' }}>
+                <select value={ciudadSeleccionada} onChange={e => setCiudadSeleccionada(e.target.value)} style={{ border: 'none', fontWeight: 'bold', color: '#dc2626', fontSize: '10px', outline: 'none' }}>
                   {geoColombia[deptoSeleccionado]?.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
 
-              <div style={{ borderBottom: '1px solid #000', padding: '4px 8px', display: 'flex' }}>
-                <span style={{ width: '100px', color: '#475569' }}>DESCUENTO</span>
-                <input value={descuento} onChange={e => setDescuento(e.target.value)} style={{ width: '50px', border: 'none', fontWeight: 'bold', color: '#dc2626' }} />
-                <span style={{ width: '60px', color: '#475569' }}>VENDEDOR</span>
-                <input value={vendedor} onChange={e => setVendedor(e.target.value)} style={{ flex: 1, border: 'none', fontWeight: 'bold', color: '#dc2626' }} />
+              <div style={{ borderBottom: '2px solid #000000', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <span style={{ width: '80px', color: '#000000' }}>🏷️ DESCUENTO</span>
+                <input value={descuento} onChange={e => setDescuento(e.target.value)} style={{ width: '40px', border: 'none', fontWeight: 'bold', color: '#dc2626', outline: 'none' }} />
+                <span style={{ width: '70px', color: '#000000' }}>👤 VENDEDOR</span>
+                <input value={vendedor} onChange={e => setVendedor(e.target.value)} style={{ flex: 1, border: 'none', fontWeight: 'bold', color: '#dc2626', outline: 'none', width: '100%', boxSizing: 'border-box' }} />
               </div>
 
               {/* Calendario Desplegable para Corte de Facturación */}
               <div style={{ padding: '4px 8px', display: 'flex', alignItems: 'center' }}>
-                <span style={{ width: '110px', color: '#475569' }}>📅 CORTE FACTURA</span>
-                <input type="date" value={corteFacturacion} onChange={e => setCorteFacturacion(e.target.value)} style={{ border: '1px solid #cbd5e1', borderRadius: '4px', color: '#2563eb', fontWeight: 'bold', padding: '1px 4px', fontSize: '9px' }} />
+                <span style={{ width: '110px', color: '#000000' }}>📅 CORTE FACTURA</span>
+                <input type="date" value={corteFacturacion} onChange={e => setCorteFacturacion(e.target.value)} style={{ border: '1px solid #000000', borderRadius: '4px', color: '#2563eb', fontWeight: 'bold', padding: '1px 4px', fontSize: '9px', outline: 'none' }} />
               </div>
             </div>
           </div>
 
           {/* CUADRO MULTI-RENGLÓN DE NOTAS U OBSERVACIONES */}
-          <div style={{ border: '1px solid #000000', padding: '6px 8px', fontSize: '10px', fontWeight: 'bold', marginBottom: '15px', backgroundColor: '#f8fafc' }}>
-            <span style={{ color: '#475569', display: 'block', marginBottom: '2px' }}>NOTAS / OBSERVACIONES:</span>
+          <div style={{ border: '2px solid #000000', padding: '6px 8px', fontSize: '10px', fontWeight: 'bold', marginBottom: '15px', backgroundColor: '#f8fafc', boxSizing: 'border-box' }}>
+            <span style={{ color: '#000000', display: 'block', marginBottom: '2px' }}>📝 NOTAS / OBSERVACIONES:</span>
             <textarea
               rows={2}
               value={notasGenerales}
@@ -295,71 +295,71 @@ export default function Home() {
 
           {/* 3. MATRIZ DE TALLAS CON ENCABEZADO VERTICAL FIJO (REPRODUCCIÓN EXACTA DE TU IMAGEN) */}
           <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10px', textAlign: 'center', border: '1px solid #000' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10px', textAlign: 'center', border: '2px solid #000000' }}>
               <thead>
-                <tr style={{ backgroundColor: '#f1f5f9', borderBottom: '1px solid #000', fontWeight: '900' }}>
-                  <th style={{ padding: '4px', borderRight: '1px solid #000', width: '30px' }} rowSpan={5}>N°</th>
-                  <th style={{ padding: '4px', borderRight: '1px solid #000', width: '65px' }} rowSpan={5}>REF</th>
-                  <th style={{ padding: '4px', borderRight: '1px solid #000', width: '150px', textAlign: 'left' }} rowSpan={5}>DESCRIPCIÓN</th>
+                <tr style={{ backgroundColor: '#f1f5f9', borderBottom: '2px solid #000000', fontWeight: '900' }}>
+                  <th style={{ padding: '4px', borderRight: '2px solid #000000', width: '30px' }} rowSpan={5}>N°</th>
+                  <th style={{ padding: '4px', borderRight: '2px solid #000000', width: '65px' }} rowSpan={5}>REF</th>
+                  <th style={{ padding: '4px', borderRight: '2px solid #000000', width: '150px', textAlign: 'left' }} rowSpan={5}>DESCRIPCIÓN</th>
                   
                   {/* BLOQUE CENTRAL CON 4 FILAS VERTICALES DE TALLAS */}
-                  <th style={{ padding: '0', borderRight: '1px solid #000' }} colSpan={8}>
-                    <div style={{ borderBottom: '1px solid #000', padding: '2px', fontWeight: '900', backgroundColor: '#e2e8f0' }}>
+                  <th style={{ padding: '0', borderRight: '2px solid #000000' }} colSpan={8}>
+                    <div style={{ borderBottom: '2px solid #000000', padding: '2px', fontWeight: '900', backgroundColor: '#e2e8f0' }}>
                       MATRIZ DE TALLAS INDEPENDIENTES
                     </div>
                   </th>
 
-                  <th style={{ padding: '4px', borderRight: '1px solid #000', width: '55px' }} rowSpan={5}>CANT. TOTAL</th>
-                  <th style={{ padding: '4px', borderRight: '1px solid #000', width: '70px' }} rowSpan={5}>PRECIO</th>
-                  <th style={{ padding: '4px', borderRight: '1px solid #000', width: '85px' }} rowSpan={5}>VALOR TOTAL</th>
+                  <th style={{ padding: '4px', borderRight: '2px solid #000000', width: '55px' }} rowSpan={5}>CANT. TOTAL</th>
+                  <th style={{ padding: '4px', borderRight: '2px solid #000000', width: '70px' }} rowSpan={5}>PRECIO</th>
+                  <th style={{ padding: '4px', borderRight: '2px solid #000000', width: '85px' }} rowSpan={5}>VALOR TOTAL</th>
                   <th style={{ padding: '4px', width: '110px' }} rowSpan={5}>NOTA / COLOR</th>
                 </tr>
 
                 {/* FILA 1 DE TALLAS EN CABECERA: MESES */}
-                <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #cbd5e1', fontSize: '8px', fontWeight: 'bold' }}>
-                  <th style={{ borderRight: '1px solid #000', padding: '2px', width: '60px', backgroundColor: '#f1f5f9' }}>MESES</th>
-                  <th style={{ borderRight: '1px solid #cbd5e1', padding: '2px', width: '28px' }}>0-3</th>
-                  <th style={{ borderRight: '1px solid #cbd5e1', padding: '2px', width: '28px' }}>3-6</th>
-                  <th style={{ borderRight: '1px solid #cbd5e1', padding: '2px', width: '28px' }}>6-9</th>
-                  <th style={{ borderRight: '1px solid #cbd5e1', padding: '2px', width: '28px' }}>9-12</th>
-                  <th style={{ borderRight: '1px solid #cbd5e1', padding: '2px', width: '28px' }}></th>
-                  <th style={{ borderRight: '1px solid #cbd5e1', padding: '2px', width: '28px' }}></th>
+                <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #000000', fontSize: '8px', fontWeight: 'bold' }}>
+                  <th style={{ borderRight: '2px solid #000000', padding: '2px', width: '60px', backgroundColor: '#f1f5f9' }}>MESES</th>
+                  <th style={{ borderRight: '1px solid #000000', padding: '2px', width: '28px' }}>0-3</th>
+                  <th style={{ borderRight: '1px solid #000000', padding: '2px', width: '28px' }}>3-6</th>
+                  <th style={{ borderRight: '1px solid #000000', padding: '2px', width: '28px' }}>6-9</th>
+                  <th style={{ borderRight: '1px solid #000000', padding: '2px', width: '28px' }}>9-12</th>
+                  <th style={{ borderRight: '1px solid #000000', padding: '2px', width: '28px' }}></th>
+                  <th style={{ borderRight: '1px solid #000000', padding: '2px', width: '28px' }}></th>
                   <th style={{ padding: '2px', width: '28px' }}></th>
                 </tr>
 
                 {/* FILA 2 DE TALLAS EN CABECERA: BEBÉS */}
-                <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #cbd5e1', fontSize: '8px', fontWeight: 'bold' }}>
-                  <th style={{ borderRight: '1px solid #000', padding: '2px', width: '60px', backgroundColor: '#f1f5f9' }}>BEBÉS</th>
-                  <th style={{ borderRight: '1px solid #cbd5e1', padding: '2px' }}>2<br/><span style={{ fontSize: '6px', color: '#64748b' }}>6-12</span></th>
-                  <th style={{ borderRight: '1px solid #cbd5e1', padding: '2px' }}>3<br/><span style={{ fontSize: '6px', color: '#64748b' }}>12-18</span></th>
-                  <th style={{ borderRight: '1px solid #cbd5e1', padding: '2px' }}>4<br/><span style={{ fontSize: '6px', color: '#64748b' }}>18-24</span></th>
-                  <th style={{ borderRight: '1px solid #cbd5e1', padding: '2px' }}>5<br/><span style={{ fontSize: '6px', color: '#64748b' }}>24-36</span></th>
-                  <th style={{ borderRight: '1px solid #cbd5e1', padding: '2px' }}>6<br/><span style={{ fontSize: '6px', color: '#64748b' }}>36-48</span></th>
-                  <th style={{ borderRight: '1px solid #cbd5e1', padding: '2px' }}></th>
+                <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #000000', fontSize: '8px', fontWeight: 'bold' }}>
+                  <th style={{ borderRight: '2px solid #000000', padding: '2px', width: '60px', backgroundColor: '#f1f5f9' }}>BEBÉS</th>
+                  <th style={{ borderRight: '1px solid #000000', padding: '2px' }}>2<br/><span style={{ fontSize: '6px', color: '#64748b' }}>6-12</span></th>
+                  <th style={{ borderRight: '1px solid #000000', padding: '2px' }}>3<br/><span style={{ fontSize: '6px', color: '#64748b' }}>12-18</span></th>
+                  <th style={{ borderRight: '1px solid #000000', padding: '2px' }}>4<br/><span style={{ fontSize: '6px', color: '#64748b' }}>18-24</span></th>
+                  <th style={{ borderRight: '1px solid #000000', padding: '2px' }}>5<br/><span style={{ fontSize: '6px', color: '#64748b' }}>24-36</span></th>
+                  <th style={{ borderRight: '1px solid #000000', padding: '2px' }}>6<br/><span style={{ fontSize: '6px', color: '#64748b' }}>36-48</span></th>
+                  <th style={{ borderRight: '1px solid #000000', padding: '2px' }}></th>
                   <th style={{ padding: '2px' }}></th>
                 </tr>
 
                 {/* FILA 3 DE TALLAS EN CABECERA: JUNIOR */}
-                <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #cbd5e1', fontSize: '8px', fontWeight: 'bold' }}>
-                  <th style={{ borderRight: '1px solid #000', padding: '2px', width: '60px', backgroundColor: '#f1f5f9' }}>JUNIOR</th>
-                  <th style={{ borderRight: '1px solid #cbd5e1', padding: '2px' }}>4</th>
-                  <th style={{ borderRight: '1px solid #cbd5e1', padding: '2px' }}>6</th>
-                  <th style={{ borderRight: '1px solid #cbd5e1', padding: '2px' }}>8</th>
-                  <th style={{ borderRight: '1px solid #cbd5e1', padding: '2px' }}>10</th>
-                  <th style={{ borderRight: '1px solid #cbd5e1', padding: '2px' }}>12</th>
-                  <th style={{ borderRight: '1px solid #cbd5e1', padding: '2px' }}>14</th>
+                <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #000000', fontSize: '8px', fontWeight: 'bold' }}>
+                  <th style={{ borderRight: '2px solid #000000', padding: '2px', width: '60px', backgroundColor: '#f1f5f9' }}>JUNIOR</th>
+                  <th style={{ borderRight: '1px solid #000000', padding: '2px' }}>4</th>
+                  <th style={{ borderRight: '1px solid #000000', padding: '2px' }}>6</th>
+                  <th style={{ borderRight: '1px solid #000000', padding: '2px' }}>8</th>
+                  <th style={{ borderRight: '1px solid #000000', padding: '2px' }}>10</th>
+                  <th style={{ borderRight: '1px solid #000000', padding: '2px' }}>12</th>
+                  <th style={{ borderRight: '1px solid #000000', padding: '2px' }}>14</th>
                   <th style={{ padding: '2px' }}>16</th>
                 </tr>
 
                 {/* FILA 4 DE TALLAS EN CABECERA: JUVENIL */}
-                <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #000', fontSize: '8px', fontWeight: 'bold' }}>
-                  <th style={{ borderRight: '1px solid #000', padding: '2px', width: '60px', backgroundColor: '#f1f5f9' }}>JUVENIL</th>
-                  <th style={{ borderRight: '1px solid #cbd5e1', padding: '2px' }}>18</th>
-                  <th style={{ borderRight: '1px solid #cbd5e1', padding: '2px' }}>20</th>
-                  <th style={{ borderRight: '1px solid #cbd5e1', padding: '2px' }}>22</th>
-                  <th style={{ borderRight: '1px solid #cbd5e1', padding: '2px' }}>24</th>
-                  <th style={{ borderRight: '1px solid #cbd5e1', padding: '2px' }}></th>
-                  <th style={{ borderRight: '1px solid #cbd5e1', padding: '2px' }}></th>
+                <tr style={{ backgroundColor: '#f8fafc', borderBottom: '2px solid #000000', fontSize: '8px', fontWeight: 'bold' }}>
+                  <th style={{ borderRight: '2px solid #000000', padding: '2px', width: '60px', backgroundColor: '#f1f5f9' }}>JUVENIL</th>
+                  <th style={{ borderRight: '1px solid #000000', padding: '2px' }}>18</th>
+                  <th style={{ borderRight: '1px solid #000000', padding: '2px' }}>20</th>
+                  <th style={{ borderRight: '1px solid #000000', padding: '2px' }}>22</th>
+                  <th style={{ borderRight: '1px solid #000000', padding: '2px' }}>24</th>
+                  <th style={{ borderRight: '1px solid #000000', padding: '2px' }}></th>
+                  <th style={{ borderRight: '1px solid #000000', padding: '2px' }}></th>
                   <th style={{ padding: '2px' }}></th>
                 </tr>
               </thead>
@@ -371,13 +371,13 @@ export default function Home() {
                   const tallasLista = mapaTallasCurva[f.curva];
 
                   return (
-                    <tr key={idx} style={{ borderBottom: '1px solid #cbd5e1' }}>
-                      <td style={{ padding: '4px', fontWeight: 'bold', borderRight: '1px solid #cbd5e1' }}>
+                    <tr key={idx} style={{ borderBottom: '1px solid #000000' }}>
+                      <td style={{ padding: '4px', fontWeight: 'bold', borderRight: '2px solid #000000' }}>
                         {idx + 1}
                       </td>
 
                       {/* REF CON BOTÓN CÁMARA 📷 EMBEBIDO */}
-                      <td style={{ padding: '4px', fontWeight: '900', borderRight: '1px solid #cbd5e1' }}>
+                      <td style={{ padding: '4px', fontWeight: '900', borderRight: '2px solid #000000' }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
                           <span>{f.referencia}</span>
                           <button
@@ -391,16 +391,16 @@ export default function Home() {
                         </div>
                       </td>
 
-                      <td style={{ padding: '4px', fontWeight: 'bold', borderRight: '1px solid #cbd5e1', textAlign: 'left' }}>
+                      <td style={{ padding: '4px', fontWeight: 'bold', borderRight: '2px solid #000000', textAlign: 'left' }}>
                         {f.descripcion}
                       </td>
 
                       {/* SELECTOR DE CURVA Y GRILLA DE TALLAS INDEPENDIENTES */}
-                      <td style={{ borderRight: '1px solid #000', padding: '2px', backgroundColor: '#f8fafc' }}>
+                      <td style={{ borderRight: '2px solid #000000', padding: '2px', backgroundColor: '#f8fafc' }}>
                         <select
                           value={f.curva}
                           onChange={e => cambiarCurvaFila(idx, e.target.value as any)}
-                          style={{ border: 'none', fontWeight: 'bold', fontSize: '9px', backgroundColor: 'transparent', color: '#1e3a8a' }}
+                          style={{ border: 'none', fontWeight: 'bold', fontSize: '9px', backgroundColor: 'transparent', color: '#1e3a8a', outline: 'none' }}
                         >
                           <option value="MESES">MESES</option>
                           <option value="BEBÉS">BEBÉS</option>
@@ -413,7 +413,7 @@ export default function Home() {
                       {columnasTallasMaster.map((_, cIdx) => {
                         const tName = tallasLista[cIdx];
                         return (
-                          <td key={cIdx} style={{ borderRight: '1px solid #cbd5e1', padding: '1px', backgroundColor: tName ? '#ffffff' : '#f1f5f9' }}>
+                          <td key={cIdx} style={{ borderRight: '1px solid #000000', padding: '1px', backgroundColor: tName ? '#ffffff' : '#f1f5f9' }}>
                             {tName ? (
                               <input
                                 type="number"
@@ -426,17 +426,17 @@ export default function Home() {
                         );
                       })}
 
-                      <td style={{ padding: '4px', fontWeight: '900', borderRight: '1px solid #cbd5e1', backgroundColor: '#fef3c7' }}>
+                      <td style={{ padding: '4px', fontWeight: '900', borderRight: '2px solid #000000', backgroundColor: '#fef3c7' }}>
                         {cantTotal}
                       </td>
 
                       {/* PRECIO UNITARIO SIEMPRE VISIBLE */}
-                      <td style={{ padding: '4px', fontWeight: 'bold', borderRight: '1px solid #cbd5e1' }}>
+                      <td style={{ padding: '4px', fontWeight: 'bold', borderRight: '2px solid #000000' }}>
                         $ {f.precioUnitario.toLocaleString('es-CO')}
                       </td>
 
                       {/* VALOR TOTAL POR FILA SIEMPRE VISIBLE */}
-                      <td style={{ padding: '4px', fontWeight: '900', borderRight: '1px solid #cbd5e1' }}>
+                      <td style={{ padding: '4px', fontWeight: '900', borderRight: '2px solid #000000' }}>
                         $ {valorTotal.toLocaleString('es-CO')}
                       </td>
                       
@@ -455,16 +455,16 @@ export default function Home() {
           </div>
 
           {/* 4. RESUMEN AGRUPADO POR CATEGORÍA CON ALERTAS VISUALES Y CANTIDADES */}
-          <div style={{ marginTop: '20px', borderTop: '2px solid #000', paddingTop: '15px' }}>
+          <div style={{ marginTop: '20px', borderTop: '2px solid #000000', paddingTop: '15px' }}>
             <h4 style={{ fontSize: '11px', fontWeight: '900', margin: '0 0 10px 0', textTransform: 'uppercase' }}>
               📦 Resumen por Categoría · {clienteNombre}
             </h4>
 
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10px', marginBottom: '15px', border: '1px solid #cbd5e1' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10px', marginBottom: '15px', border: '2px solid #000000' }}>
               <thead>
-                <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #cbd5e1' }}>
-                  <th style={{ padding: '6px', textAlign: 'left' }}>Categoría</th>
-                  <th style={{ padding: '6px', textAlign: 'center' }}>Unidades Pedidas</th>
+                <tr style={{ backgroundColor: '#f8fafc', borderBottom: '2px solid #000000' }}>
+                  <th style={{ padding: '6px', textAlign: 'left', borderRight: '2px solid #000000' }}>Categoría</th>
+                  <th style={{ padding: '6px', textAlign: 'center', borderRight: '2px solid #000000' }}>Unidades Pedidas</th>
                   <th style={{ padding: '6px', textAlign: 'right' }}>Valor Total ($ COP)</th>
                 </tr>
               </thead>
@@ -475,16 +475,16 @@ export default function Home() {
                   const valCat = itemsCat.reduce((acc, f) => acc + totalValorFila(f), 0);
 
                   return (
-                    <tr key={cIdx} style={{ borderBottom: '1px solid #e2e8f0' }}>
-                      <td style={{ padding: '6px', fontWeight: 'bold' }}>{cat}</td>
-                      <td style={{ padding: '6px', textAlign: 'center', fontWeight: 'bold' }}>{undsCat} unds</td>
+                    <tr key={cIdx} style={{ borderBottom: '1px solid #000000' }}>
+                      <td style={{ padding: '6px', fontWeight: 'bold', borderRight: '2px solid #000000' }}>{cat}</td>
+                      <td style={{ padding: '6px', textAlign: 'center', fontWeight: 'bold', borderRight: '2px solid #000000' }}>{undsCat} unds</td>
                       <td style={{ padding: '6px', textAlign: 'right', fontWeight: '900', color: '#059669' }}>$ {valCat.toLocaleString('es-CO')}</td>
                     </tr>
                   );
                 })}
                 <tr style={{ backgroundColor: '#f1f5f9', fontWeight: '900' }}>
-                  <td style={{ padding: '6px' }}>TOTAL GENERAL DE UNIDADES Y VALOR</td>
-                  <td style={{ padding: '6px', textAlign: 'center' }}>{totalPrendasGeneral()} unds</td>
+                  <td style={{ padding: '6px', borderRight: '2px solid #000000' }}>TOTAL GENERAL DE UNIDADES Y VALOR</td>
+                  <td style={{ padding: '6px', textAlign: 'center', borderRight: '2px solid #000000' }}>{totalPrendasGeneral()} unds</td>
                   <td style={{ padding: '6px', textAlign: 'right', color: '#dc2626', fontSize: '12px' }}>
                     {/* El Checkbox controla ÚNICAMENTE la visibilidad del MONTO GENERAL */}
                     {mostrarTotalGeneral ? `$ ${totalValorGeneral().toLocaleString('es-CO')} COP` : '[VALOR TOTAL GENERAL RESERVADO]'}
@@ -494,7 +494,7 @@ export default function Home() {
             </table>
 
             {/* Alertas Visuales con Unidades Exactas Pedidas */}
-            <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#64748b', display: 'block', marginBottom: '6px' }}>
+            <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#000000', display: 'block', marginBottom: '6px' }}>
               🎯 Categorías de este pedido ({categoriasEnPedido.length} de {categoriasMaster.length} pedidas):
             </span>
 
@@ -505,7 +505,7 @@ export default function Home() {
                 const undsCat = itemsCat.reduce((acc, f) => acc + totalPrendasFila(f), 0);
 
                 return (
-                  <div key={mIdx} style={{ padding: '4px 8px', borderRadius: '4px', backgroundColor: solicitada ? '#dcfce7' : '#fee2e2', color: solicitada ? '#166534' : '#991b1b', border: `1px solid ${solicitada ? '#86efac' : '#fca5a5'}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div key={mIdx} style={{ padding: '4px 8px', borderRadius: '4px', backgroundColor: solicitada ? '#dcfce7' : '#fee2e2', color: solicitada ? '#166534' : '#991b1b', border: `1px solid ${solicitada ? '#166534' : '#dc2626'}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
                       {solicitada ? '✓' : '✕'} {catName}
                     </span>
@@ -574,6 +574,23 @@ export default function Home() {
         )}
 
       </div>
+
+      {/* ESTILOS DE IMPRESIÓN CORREGIDOS: OCULTAN 100% LA BARRA DE CONTROLES */}
+      <style jsx global>{`
+        @media print {
+          .no-print {
+            display: none !important;
+          }
+          body {
+            background-color: #ffffff !important;
+            color: #000000 !important;
+          }
+          #hoja-pedido-oficial {
+            border: 2px solid #000000 !important;
+            box-shadow: none !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }
