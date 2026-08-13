@@ -42,7 +42,7 @@ const supabase = {
   })
 };
 
-// Base Geográfica Colombia & Internacional (Mayúsculas)
+// Base Geográfica Colombia & Internacional
 const geoColombia: { [key: string]: string[] } = {
   'ANTIOQUIA': ['ITAGÜÍ', 'MEDELLÍN', 'BELLO', 'ENVIGADO', 'SABANETA', 'RIONEGRO'],
   'CÓRDOBA': ['MONTERÍA', 'CERETÉ', 'SAHAGÚN', 'LORICA', 'PLANETA RICA'],
@@ -54,10 +54,18 @@ const geoColombia: { [key: string]: string[] } = {
   'INTERNACIONAL': ['MIAMI (EE.UU.)', 'PANAMÁ (PA)', 'QUITO (EC)']
 };
 
-interface ConfigPreciosTenant {
-  deltaL2: number;
-  margenL3Porcentaje: number;
-  deltaL4MED: number;
+interface PedidoDespacho {
+  id: string;
+  codigoPedido: string;
+  cliente: string;
+  nit: string;
+  direccion: string;
+  ciudad: string;
+  telefono: string;
+  prendasTotales: number;
+  transportadora: string;
+  guiaTracking: string;
+  estadoDespacho: 'PENDIENTE' | 'EN_EMPAQUE' | 'TIQUETADO' | 'EN_TRANSITO';
 }
 
 interface FilaItemPedido {
@@ -67,28 +75,51 @@ interface FilaItemPedido {
   curva: 'MESES' | 'BEBÉS' | 'JUNIOR' | 'JUVENIL';
   tallasMap: { [key: string]: number };
   preciosPorLista: { L1: number; L2: number; L3: number; L4MED: number };
-  overrideActivo?: boolean;
   colores: { nombre: string; bg: string; text: string }[];
   imagenUrl: string;
 }
 
 export default function Home() {
-  const [pestana, setPestana] = useState<'NUEVO_PEDIDO' | 'CONFIG_PRECIOS' | 'DASHBOARD'>('NUEVO_PEDIDO');
+  const [pestana, setPestana] = useState<'NUEVO_PEDIDO' | 'BODEGA_TIQUETES' | 'CONFIG_PRECIOS' | 'DASHBOARD'>('BODEGA_TIQUETES');
   const [listaActiva, setListaActiva] = useState<'L1' | 'L2' | 'L3' | 'L4MED'>('L1');
   const [mostrarTotalGeneral, setMostrarTotalGeneral] = useState(true);
   const [mensaje, setMensaje] = useState('');
   
-  // Estado para Modal Flotante de Imagen
+  // Estado para Modal Flotante de Imagen y Tiquete
   const [modalFoto, setModalFoto] = useState<FilaItemPedido | null>(null);
+  const [tiqueteImpresion, setTiqueteImpresion] = useState<PedidoDespacho | null>(null);
 
-  // Parámetros Globales del Tenant (EMP-0001 FJ KIDS S.A.S)
-  const [configPrecios, setConfigPrecios] = useState<ConfigPreciosTenant>({
-    deltaL2: 1000,
-    margenL3Porcentaje: 70,
-    deltaL4MED: -2000
-  });
+  // Lista de Pedidos para Despacho y Tiquetado
+  const [pedidosDespacho, setPedidosDespacho] = useState<PedidoDespacho[]>([
+    {
+      id: 'PED-0363',
+      codigoPedido: 'PED-0363',
+      cliente: 'MANUELA MENDEZ ZAPATA',
+      nit: '1000207034-1',
+      direccion: 'CL 49 49 22',
+      ciudad: 'ITAGÜÍ, ANTIOQUIA',
+      telefono: '3005381816',
+      prendasTotales: 188,
+      transportadora: 'ENVÍA',
+      guiaTracking: 'ENV-99887766-COP',
+      estadoDespacho: 'EN_EMPAQUE'
+    },
+    {
+      id: 'PED-0364',
+      codigoPedido: 'PED-0364',
+      cliente: 'EL PALACIO DE LA PANTALETA #1',
+      nit: '900.123.456-7',
+      direccion: 'CRA 4 #31-20 CENTRO',
+      ciudad: 'MONTERÍA, CÓRDOBA',
+      telefono: '3116549870',
+      prendasTotales: 240,
+      transportadora: 'COORDINADORA',
+      guiaTracking: 'COO-44556677-COP',
+      estadoDespacho: 'PENDIENTE'
+    }
+  ]);
 
-  // Datos Encabezado Pedido (MAYÚSCULAS)
+  // Datos Encabezado Pedido
   const [clienteNombre, setClienteNombre] = useState('MANUELA MENDEZ ZAPATA');
   const [nitCliente, setNitCliente] = useState('1000207034-1');
   const [almacen, setAlmacen] = useState('SWEET BOYS');
@@ -96,7 +127,6 @@ export default function Home() {
   const [celular, setCelular] = useState('3005381816');
   const [direccion, setDireccion] = useState('CL 49 49 22');
   
-  // Geografía
   const [deptoSeleccionado, setDeptoSeleccionado] = useState('ANTIOQUIA');
   const [ciudadSeleccionada, setCiudadSeleccionada] = useState('ITAGÜÍ');
 
@@ -114,90 +144,13 @@ export default function Home() {
   const [filas, setFilas] = useState<FilaItemPedido[]>([
     { num: 1, referencia: '6179', descripcion: 'BERMUDA JUNIOR', curva: 'JUNIOR', tallasMap: { '4': 2, '6': 2, '8': 3, '10': 3, '12': 3, '14': 3 }, preciosPorLista: { L1: 56900, L2: 57900, L3: 96900, L4MED: 54900 }, colores: [{ nombre: 'AZUL', bg: '#2563eb', text: '#ffffff' }], imagenUrl: 'https://images.unsplash.com/photo-1519238263530-99bdd11df2ea?w=600&q=80' },
     { num: 2, referencia: '6180', descripcion: 'BERMUDA JUNIOR', curva: 'JUNIOR', tallasMap: { '4': 2, '6': 2, '8': 3, '10': 4, '12': 4, '14': 4 }, preciosPorLista: { L1: 56900, L2: 57900, L3: 96900, L4MED: 54900 }, colores: [{ nombre: 'AZUL', bg: '#2563eb', text: '#ffffff' }], imagenUrl: 'https://images.unsplash.com/photo-1622290291468-a28f7a7dc6a8?w=600&q=80' },
-    { num: 3, referencia: '6181', descripcion: 'BERMUDA JUNIOR', curva: 'JUNIOR', tallasMap: { '4': 2, '6': 2, '8': 3, '10': 4, '12': 4, '14': 4 }, preciosPorLista: { L1: 56900, L2: 57900, L3: 96900, L4MED: 54900 }, colores: [{ nombre: 'AZUL', bg: '#2563eb', text: '#ffffff' }], imagenUrl: 'https://images.unsplash.com/photo-1503919545889-aef636e10ad4?w=600&q=80' },
-    { num: 4, referencia: '6182', descripcion: 'BERMUDA JUNIOR', curva: 'JUNIOR', tallasMap: { '4': 2, '6': 2, '8': 6, '10': 6, '12': 6, '14': 6 }, preciosPorLista: { L1: 56900, L2: 57900, L3: 96900, L4MED: 54900 }, colores: [{ nombre: 'AZUL', bg: '#2563eb', text: '#ffffff' }], imagenUrl: 'https://images.unsplash.com/photo-1519238263530-99bdd11df2ea?w=600&q=80' },
-    { num: 5, referencia: '6183', descripcion: 'BERMUDA JUNIOR', curva: 'JUNIOR', tallasMap: { '4': 2, '6': 2, '8': 4, '10': 6, '12': 6, '14': 6 }, preciosPorLista: { L1: 53900, L2: 54900, L3: 91900, L4MED: 51900 }, colores: [{ nombre: 'NEGRO', bg: '#000000', text: '#ffffff' }], imagenUrl: 'https://images.unsplash.com/photo-1622290291468-a28f7a7dc6a8?w=600&q=80' },
-    { num: 6, referencia: '6183', descripcion: 'BERMUDA JUNIOR', curva: 'JUNIOR', tallasMap: { '4': 1, '6': 1, '8': 2, '10': 3, '12': 3, '14': 3 }, preciosPorLista: { L1: 53900, L2: 54900, L3: 91900, L4MED: 51900 }, colores: [{ nombre: 'ARENA', bg: '#a3a3a3', text: '#000000' }], imagenUrl: 'https://images.unsplash.com/photo-1503919545889-aef636e10ad4?w=600&q=80' },
-    { num: 7, referencia: '6184', descripcion: 'BERMUDA JUNIOR', curva: 'JUNIOR', tallasMap: { '4': 1, '6': 1, '8': 2, '10': 3, '12': 3, '14': 3 }, preciosPorLista: { L1: 51900, L2: 52900, L3: 88900, L4MED: 49900 }, colores: [{ nombre: 'CAQUI', bg: '#d4b106', text: '#000000' }], imagenUrl: 'https://images.unsplash.com/photo-1519238263530-99bdd11df2ea?w=600&q=80' },
-    { num: 8, referencia: '6184', descripcion: 'BERMUDA JUNIOR', curva: 'JUNIOR', tallasMap: { '4': 2, '6': 2, '8': 4, '10': 6, '12': 6, '14': 6 }, preciosPorLista: { L1: 51900, L2: 52900, L3: 88900, L4MED: 49900 }, colores: [{ nombre: 'NEGRO', bg: '#000000', text: '#ffffff' }], imagenUrl: 'https://images.unsplash.com/photo-1622290291468-a28f7a7dc6a8?w=600&q=80' },
-    { num: 9, referencia: '6185', descripcion: 'BERMUDA JUNIOR', curva: 'JUNIOR', tallasMap: { '4': 2, '6': 2, '8': 6, '10': 6, '12': 6, '14': 6 }, preciosPorLista: { L1: 56900, L2: 57900, L3: 96900, L4MED: 54900 }, colores: [{ nombre: 'AZUL', bg: '#2563eb', text: '#ffffff' }], imagenUrl: 'https://images.unsplash.com/photo-1503919545889-aef636e10ad4?w=600&q=80' }
+    { num: 3, referencia: '6181', descripcion: 'BERMUDA JUNIOR', curva: 'JUNIOR', tallasMap: { '4': 2, '6': 2, '8': 3, '10': 4, '12': 4, '14': 4 }, preciosPorLista: { L1: 56900, L2: 57900, L3: 96900, L4MED: 54900 }, colores: [{ nombre: 'AZUL', bg: '#2563eb', text: '#ffffff' }], imagenUrl: 'https://images.unsplash.com/photo-1503919545889-aef636e10ad4?w=600&q=80' }
   ]);
-
-  // Lista Master de Categorías
-  const categoriasMaster = [
-    'BERMUDA JUNIOR', 'BERMUDA BEBE', 'CONJUNTO BEBE DORMILON', 'CONJUNTO BEBE PREMIUM',
-    'CONJUNTO JUNIOR BASICO T16', 'CONJUNTO JUNIOR PREMIUM T16', 'JEAN JUNIOR', 'CAMISETA JUNIOR CR',
-    'CAMISA BEBE MC', 'CAMISA BEBE ML', 'CAMISA JUNIOR MC', 'CAMISA JUNIOR ML',
-    'CAMISETA BEBE TIPO POLO', 'CAMISETA JUNIOR TIPO POLO', 'CAMISETAS BEBE CR', 'CONJUNTO BEBE BASICO',
-    'CONJUNTO JUNIOR PREMIUM T12', 'JEAN BEBE', 'PANTALON BEBE', 'PANTALON JUNIOR',
-    'TRIO CONJUNTO BEBE PREMIUN ELEGANTE', 'TRIO CONJUNTO JUNIOR PREMIUN DEPORTIVO T-16', 'TRIO CONJUNTO JUNIOR PREMIUN ELEGANTE T-12'
-  ];
 
   const inputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
 
-  // Recalcular Precios con L1, L2, L3 y L4MED
-  const aplicarParametrosPrecios = async () => {
-    setFilas(prev =>
-      prev.map(f => {
-        if (f.overrideActivo) return f;
-        const l1 = f.preciosPorLista.L1;
-        const l2 = l1 + configPrecios.deltaL2;
-        const l3 = Math.round((l1 * (1 + configPrecios.margenL3Porcentaje / 100)) / 100) * 100 - 100;
-        const l4MED = l1 + configPrecios.deltaL4MED;
-
-        return {
-          ...f,
-          preciosPorLista: { L1: l1, L2: l2, L3: l3, L4MED: l4MED }
-        };
-      })
-    );
-
-    // Registro Inmutable en Audit Log
-    await supabase.from('audit_logs').insert([{
-      tenant_id: 'EMP-0001',
-      usuario_id: 'USR-0001',
-      usuario_nombre: 'Adrián Peña',
-      accion: 'ACTUALIZAR_PARAMETROS_PRECIOS',
-      entidad_afectada: 'TENANT_CONFIG',
-      entidad_id: 'EMP-0001',
-      valor_nuevo: configPrecios
-    }]);
-
-    setMensaje('⚙️ Parámetros de precios actualizados (L1, L2, L3 y L4 MED).');
-  };
-
-  // Override Manual por Referencia y Lista
-  const cambiarPrecioOverride = async (idx: number, lista: 'L1' | 'L2' | 'L3' | 'L4MED', nuevoValor: number) => {
-    setFilas(prev =>
-      prev.map((f, i) => {
-        if (i === idx) {
-          const nuevosPrecios = { ...f.preciosPorLista, [lista]: nuevoValor };
-          return { ...f, preciosPorLista: nuevosPrecios, overrideActivo: true };
-        }
-        return f;
-      })
-    );
-
-    // Registrar Override en Audit Log
-    await supabase.from('audit_logs').insert([{
-      tenant_id: 'EMP-0001',
-      usuario_id: 'USR-0001',
-      usuario_nombre: 'Adrián Peña',
-      accion: 'OVERRIDE_PRECIO_MANUAL',
-      entidad_afectada: 'PRODUCTOS',
-      entidad_id: filas[idx].referencia,
-      valor_nuevo: { lista, precio_anterior: filas[idx].preciosPorLista[lista], precio_nuevo: nuevoValor }
-    }]);
-
-    setMensaje(`✏️ Override manual aplicado a REF ${filas[idx].referencia} en ${lista}: $ ${nuevoValor.toLocaleString('es-CO')} COP.`);
-  };
-
   const cambiarTallaValor = (idx: number, keyTalla: string, val: number) => {
     setFilas(prev => prev.map((f, i) => i === idx ? { ...f, tallasMap: { ...f.tallasMap, [keyTalla]: Math.max(0, val) } } : f));
-  };
-
-  const cambiarCurvaFila = (idx: number, nuevaCurva: 'MESES' | 'BEBÉS' | 'JUNIOR' | 'JUVENIL') => {
-    setFilas(prev => prev.map((f, i) => i === idx ? { ...f, curva: nuevaCurva, tallasMap: {} } : f));
   };
 
   const totalPrendasFila = (f: FilaItemPedido) => Object.values(f.tallasMap).reduce((a, b) => a + (b || 0), 0);
@@ -206,40 +159,24 @@ export default function Home() {
   const totalPrendasGeneral = () => filas.reduce((acc, f) => acc + totalPrendasFila(f), 0);
   const totalValorGeneral = () => filas.reduce((acc, f) => acc + totalValorFila(f), 0);
 
-  const categoriasEnPedido = Array.from(new Set(filas.map(f => f.descripcion)));
+  // Asignar Guía y Generar Tiquete de Empaque
+  const actualizarGuiaYEstado = async (id: string, transportadora: string, guia: string, nuevoEstado: 'PENDIENTE' | 'EN_EMPAQUE' | 'TIQUETADO' | 'EN_TRANSITO') => {
+    setPedidosDespacho(prev =>
+      prev.map(p => p.id === id ? { ...p, transportadora, guiaTracking: guia, estadoDespacho: nuevoEstado } : p)
+    );
 
-  const manejarKeyDownExcel = (e: React.KeyboardEvent, filaIdx: number, colIdx: number, valActual: number) => {
-    const tallasLista = mapaTallasCurva[filas[filaIdx].curva].filter(t => t !== '');
-    
-    if (e.key === 'Enter' || e.key === 'ArrowRight') {
-      e.preventDefault();
-      
-      if (colIdx < tallasLista.length - 1) {
-        const siguienteTallaKey = tallasLista[colIdx + 1];
-        cambiarTallaValor(filaIdx, siguienteTallaKey, valActual || 2);
-        
-        const nextInputKey = `${filaIdx}-${colIdx + 1}`;
-        setTimeout(() => {
-          const el = inputRefs.current[nextInputKey];
-          if (el) {
-            el.focus();
-            el.select();
-          }
-        }, 50);
-      } else if (filaIdx < filas.length - 1) {
-        const primerTallaSigFila = mapaTallasCurva[filas[filaIdx + 1].curva][0];
-        cambiarTallaValor(filaIdx + 1, primerTallaSigFila, valActual || 2);
+    // Registro Inmutable en Audit Log
+    await supabase.from('audit_logs').insert([{
+      tenant_id: 'EMP-0001',
+      usuario_id: 'USR-0001',
+      usuario_nombre: 'Adrián Peña',
+      accion: 'DESPACHO_TIQUETADO_GUIA',
+      entidad_afectada: 'PEDIDOS_LOGISTICA',
+      entidad_id: id,
+      valor_nuevo: { transportadora, guia, estado: nuevoEstado }
+    }]);
 
-        const nextRowKey = `${filaIdx + 1}-0`;
-        setTimeout(() => {
-          const el = inputRefs.current[nextRowKey];
-          if (el) {
-            el.focus();
-            el.select();
-          }
-        }, 50);
-      }
-    }
+    setMensaje(`📦 Pedido ${id} actualizado: ${transportadora} (Guía: ${guia}) -> Estado: ${nuevoEstado}`);
   };
 
   const guardarYExportarPDF = async () => {
@@ -270,42 +207,18 @@ export default function Home() {
           </div>
 
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <button onClick={() => setPestana('BODEGA_TIQUETES')} style={{ padding: '8px 12px', borderRadius: '8px', border: 'none', fontWeight: 'bold', fontSize: '11px', cursor: 'pointer', backgroundColor: pestana === 'BODEGA_TIQUETES' ? '#38bdf8' : '#1e293b', color: pestana === 'BODEGA_TIQUETES' ? '#0f172a' : '#ffffff' }}>
+              📦 Despachos & Tiquetes
+            </button>
             <button onClick={() => setPestana('NUEVO_PEDIDO')} style={{ padding: '8px 12px', borderRadius: '8px', border: 'none', fontWeight: 'bold', fontSize: '11px', cursor: 'pointer', backgroundColor: pestana === 'NUEVO_PEDIDO' ? '#10b981' : '#1e293b', color: pestana === 'NUEVO_PEDIDO' ? '#022c22' : '#ffffff' }}>
               📋 Pedido B2B
             </button>
-            <button onClick={() => setPestana('CONFIG_PRECIOS')} style={{ padding: '8px 12px', borderRadius: '8px', border: 'none', fontWeight: 'bold', fontSize: '11px', cursor: 'pointer', backgroundColor: pestana === 'CONFIG_PRECIOS' ? '#38bdf8' : '#1e293b', color: pestana === 'CONFIG_PRECIOS' ? '#0f172a' : '#ffffff' }}>
+            <button onClick={() => setPestana('CONFIG_PRECIOS')} style={{ padding: '8px 12px', borderRadius: '8px', border: 'none', fontWeight: 'bold', fontSize: '11px', cursor: 'pointer', backgroundColor: pestana === 'CONFIG_PRECIOS' ? '#a855f7' : '#1e293b', color: '#ffffff' }}>
               ⚙️ Reglas de Precios
             </button>
             <button onClick={() => setPestana('DASHBOARD')} style={{ padding: '8px 12px', borderRadius: '8px', border: 'none', fontWeight: 'bold', fontSize: '11px', cursor: 'pointer', backgroundColor: pestana === 'DASHBOARD' ? '#fbbf24' : '#1e293b', color: pestana === 'DASHBOARD' ? '#451a03' : '#ffffff' }}>
               📊 Dashboard
             </button>
-
-            {/* SELECTOR INTERACTIVO DE LISTAS DE PRECIO (L1, L2, L3, L4 MED) */}
-            <div style={{ display: 'flex', gap: '4px', backgroundColor: '#1e293b', padding: '4px', borderRadius: '8px', border: '1px solid #334155' }}>
-              {(['L1', 'L2', 'L3', 'L4MED'] as const).map(l => (
-                <button
-                  key={l}
-                  onClick={() => setListaActiva(l)}
-                  style={{
-                    padding: '4px 10px',
-                    borderRadius: '6px',
-                    border: 'none',
-                    fontWeight: '900',
-                    fontSize: '10px',
-                    cursor: 'pointer',
-                    backgroundColor: listaActiva === l ? '#38bdf8' : 'transparent',
-                    color: listaActiva === l ? '#0f172a' : '#cbd5e1'
-                  }}
-                >
-                  {l === 'L4MED' ? 'L4 MED' : l} {l === 'L1' ? '(MAYORISTA)' : l === 'L3' ? '(DETAL)' : ''}
-                </button>
-              ))}
-            </div>
-
-            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: 'bold', color: '#fbbf24', cursor: 'pointer', backgroundColor: '#1e293b', padding: '6px 12px', borderRadius: '6px', border: '1px solid #334155' }}>
-              <input type="checkbox" checked={mostrarTotalGeneral} onChange={e => setMostrarTotalGeneral(e.target.checked)} />
-              💵 Mostrar Valor Total General ($ COP)
-            </label>
 
             <button onClick={guardarYExportarPDF} style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', backgroundColor: '#10b981', color: '#022c22', fontWeight: '900', fontSize: '11px', cursor: 'pointer' }}>
               🖨️ PDF
@@ -319,105 +232,90 @@ export default function Home() {
           </div>
         )}
 
-        {/* PESTAÑA: PARAMETRIZACIÓN DE PRECIOS & OVERRIDES (SISTEMA L1-L4MED) */}
-        {pestana === 'CONFIG_PRECIOS' && (
+        {/* PESTAÑA: MÓDULO DE DESPACHOS, TIQUETADO & GUÍAS */}
+        {pestana === 'BODEGA_TIQUETES' && (
           <div style={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', padding: '20px', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
             <div>
-              <h2 style={{ fontSize: '1.2rem', fontWeight: '900', color: '#38bdf8', margin: 0 }}>⚙️ Parámetros Globales de Listas de Precios (`EMP-0001`)</h2>
-              <p style={{ fontSize: '12px', color: '#94a3b8', margin: '4px 0 0 0' }}>Estructura oficial: L1 (Mayorista Base), L2 (Distribuidor), L3 (Detal/Website) y L4 MED (Local Medellín).</p>
+              <h2 style={{ fontSize: '1.2rem', fontWeight: '900', color: '#38bdf8', margin: 0 }}>🚚 Control Logístico de Despachos & Tiquetes de Empaque</h2>
+              <p style={{ fontSize: '12px', color: '#94a3b8', margin: '4px 0 0 0' }}>Genera tiquetes adhesivos para cajas y asigna número de guía con rastreo.</p>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '15px' }}>
-              <div style={{ backgroundColor: '#1e293b', padding: '15px', borderRadius: '12px', border: '1px solid #334155' }}>
-                <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', color: '#fbbf24', marginBottom: '6px' }}>Delta Lista L2 ($ COP):</label>
-                <input
-                  type="number"
-                  value={configPrecios.deltaL2}
-                  onChange={e => setConfigPrecios({ ...configPrecios, deltaL2: parseInt(e.target.value) || 0 })}
-                  style={{ width: '100%', padding: '8px', backgroundColor: '#0f172a', border: '1px solid #334155', color: '#fff', borderRadius: '6px', fontWeight: 'bold' }}
-                />
-                <span style={{ fontSize: '10px', color: '#94a3b8', display: 'block', marginTop: '4px' }}>L2 = L1 + Delta (Ej: +$1.000 COP)</span>
-              </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '15px' }}>
+              {pedidosDespacho.map((p) => (
+                <div key={p.id} style={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '14px', padding: '18px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '12px' }}>
+                  
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                      <span style={{ fontSize: '12px', fontWeight: '900', color: '#fbbf24' }}>{p.codigoPedido}</span>
+                      <span style={{
+                        fontSize: '9px',
+                        fontWeight: '900',
+                        padding: '3px 8px',
+                        borderRadius: '6px',
+                        backgroundColor: p.estadoDespacho === 'PENDIENTE' ? '#881337' : p.estadoDespacho === 'EN_EMPAQUE' ? '#713f12' : '#064e3b',
+                        color: p.estadoDespacho === 'PENDIENTE' ? '#fda4af' : p.estadoDespacho === 'EN_EMPAQUE' ? '#fde047' : '#6ee7b7'
+                      }}>
+                        {p.estadoDespacho}
+                      </span>
+                    </div>
 
-              <div style={{ backgroundColor: '#1e293b', padding: '15px', borderRadius: '12px', border: '1px solid #334155' }}>
-                <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', color: '#fbbf24', marginBottom: '6px' }}>Margen Lista L3 Detal (%):</label>
-                <input
-                  type="number"
-                  value={configPrecios.margenL3Porcentaje}
-                  onChange={e => setConfigPrecios({ ...configPrecios, margenL3Porcentaje: parseInt(e.target.value) || 0 })}
-                  style={{ width: '100%', padding: '8px', backgroundColor: '#0f172a', border: '1px solid #334155', color: '#fff', borderRadius: '6px', fontWeight: 'bold' }}
-                />
-                <span style={{ fontSize: '10px', color: '#94a3b8', display: 'block', marginTop: '4px' }}>L3 = L1 + % Margen (Ej: +70% e-commerce)</span>
-              </div>
+                    <h3 style={{ fontSize: '1rem', fontWeight: '900', margin: '0 0 4px 0', color: '#ffffff' }}>{p.cliente}</h3>
+                    <p style={{ fontSize: '11px', color: '#cbd5e1', margin: '2px 0' }}>📍 {p.direccion} — <strong>{p.ciudad}</strong></p>
+                    <p style={{ fontSize: '11px', color: '#cbd5e1', margin: '2px 0' }}>📞 Tel/Cel: <strong>{p.telefono}</strong> · NIT: {p.nit}</p>
+                    <p style={{ fontSize: '11px', color: '#38bdf8', fontWeight: 'bold', margin: '4px 0 0 0' }}>📦 Total: {p.prendasTotales} prendas infantiles</p>
+                  </div>
 
-              <div style={{ backgroundColor: '#1e293b', padding: '15px', borderRadius: '12px', border: '1px solid #334155' }}>
-                <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', color: '#fbbf24', marginBottom: '6px' }}>Delta Lista L4 MED ($ COP):</label>
-                <input
-                  type="number"
-                  value={configPrecios.deltaL4MED}
-                  onChange={e => setConfigPrecios({ ...configPrecios, deltaL4MED: parseInt(e.target.value) || 0 })}
-                  style={{ width: '100%', padding: '8px', backgroundColor: '#0f172a', border: '1px solid #334155', color: '#fff', borderRadius: '6px', fontWeight: 'bold' }}
-                />
-                <span style={{ fontSize: '10px', color: '#94a3b8', display: 'block', marginTop: '4px' }}>L4 MED = L1 + Delta (Ej: -$2.000 COP)</span>
-              </div>
+                  {/* Formulario Asignación Guía */}
+                  <div style={{ backgroundColor: '#0f172a', padding: '10px', borderRadius: '8px', border: '1px solid #334155', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      <select
+                        value={p.transportadora}
+                        onChange={e => actualizarGuiaYEstado(p.id, e.target.value, p.guiaTracking, p.estadoDespacho)}
+                        style={{ backgroundColor: '#1e293b', color: '#fff', border: '1px solid #334155', borderRadius: '6px', fontSize: '10px', fontWeight: 'bold', padding: '6px' }}
+                      >
+                        <option value="ENVÍA">ENVÍA</option>
+                        <option value="COORDINADORA">COORDINADORA</option>
+                        <option value="SERVIENTREGA">SERVIENTREGA</option>
+                        <option value="INTERRAPIDÍSIMO">INTERRAPIDÍSIMO</option>
+                        <option value="DOMICILIO LOCAL">DOMICILIO LOCAL</option>
+                      </select>
+
+                      <input
+                        type="text"
+                        placeholder="N° de Guía Tracking"
+                        value={p.guiaTracking}
+                        onChange={e => actualizarGuiaYEstado(p.id, p.transportadora, e.target.value, p.estadoDespacho)}
+                        style={{ flex: 1, backgroundColor: '#1e293b', color: '#fbbf24', border: '1px solid #334155', borderRadius: '6px', fontSize: '10px', fontWeight: 'bold', padding: '6px', outline: 'none' }}
+                      />
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      <button
+                        onClick={() => setTiqueteImpresion(p)}
+                        style={{ flex: 1, padding: '8px', backgroundColor: '#38bdf8', color: '#0f172a', border: 'none', borderRadius: '6px', fontWeight: '900', fontSize: '10px', cursor: 'pointer' }}
+                      >
+                        🏷️ Imprimir Tiquete
+                      </button>
+                      <button
+                        onClick={() => actualizarGuiaYEstado(p.id, p.transportadora, p.guiaTracking, 'EN_TRANSITO')}
+                        style={{ flex: 1, padding: '8px', backgroundColor: '#10b981', color: '#022c22', border: 'none', borderRadius: '6px', fontWeight: '900', fontSize: '10px', cursor: 'pointer' }}
+                      >
+                        🚚 Marcar en Tránsito
+                      </button>
+                    </div>
+                  </div>
+
+                </div>
+              ))}
             </div>
-
-            <button onClick={aplicarParametrosPrecios} style={{ padding: '12px', backgroundColor: '#10b981', color: '#022c22', border: 'none', borderRadius: '10px', fontWeight: '900', cursor: 'pointer', fontSize: '13px' }}>
-              ⚡ Guardar & Recalcular Precios en Vivo
-            </button>
-
-            {/* Tabla Overrides Manuales por Producto */}
-            <div style={{ overflowX: 'auto', marginTop: '10px' }}>
-              <h3 style={{ fontSize: '1rem', fontWeight: '900', color: '#fbbf24', marginBottom: '10px' }}>✏️ Overrides Manuales por Referencia</h3>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px', textAlign: 'left' }}>
-                <thead>
-                  <tr style={{ backgroundColor: '#1e293b', color: '#94a3b8', borderBottom: '1px solid #334155' }}>
-                    <th style={{ padding: '8px' }}>REF</th>
-                    <th style={{ padding: '8px' }}>DESCRIPCIÓN</th>
-                    <th style={{ padding: '8px' }}>PRECIO L1 (BASE)</th>
-                    <th style={{ padding: '8px' }}>L2 (DISTRIBUIDOR)</th>
-                    <th style={{ padding: '8px' }}>L3 (DETAL)</th>
-                    <th style={{ padding: '8px' }}>L4 MED (LOCAL)</th>
-                    <th style={{ padding: '8px' }}>ESTADO OVERRIDE</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filas.map((f, idx) => (
-                    <tr key={idx} style={{ borderBottom: '1px solid #1e293b' }}>
-                      <td style={{ padding: '8px', fontWeight: 'bold', color: '#fbbf24' }}>{f.referencia}</td>
-                      <td style={{ padding: '8px', fontWeight: 'bold' }}>{f.descripcion}</td>
-                      <td style={{ padding: '8px' }}>
-                        <input
-                          type="number"
-                          value={f.preciosPorLista.L1}
-                          onChange={e => cambiarPrecioOverride(idx, 'L1', parseInt(e.target.value) || 0)}
-                          style={{ width: '80px', padding: '4px', backgroundColor: '#1e293b', border: '1px solid #334155', color: '#10b981', fontWeight: 'bold', borderRadius: '4px' }}
-                        />
-                      </td>
-                      <td style={{ padding: '8px' }}>$ {f.preciosPorLista.L2.toLocaleString('es-CO')}</td>
-                      <td style={{ padding: '8px' }}>$ {f.preciosPorLista.L3.toLocaleString('es-CO')}</td>
-                      <td style={{ padding: '8px' }}>$ {f.preciosPorLista.L4MED.toLocaleString('es-CO')}</td>
-                      <td style={{ padding: '8px' }}>
-                        {f.overrideActivo ? (
-                          <span style={{ backgroundColor: '#713f12', color: '#fde047', fontSize: '9px', fontWeight: '900', padding: '2px 6px', borderRadius: '4px' }}>✏️ MANUAL OVERRIDE</span>
-                        ) : (
-                          <span style={{ backgroundColor: '#064e3b', color: '#34d399', fontSize: '9px', fontWeight: '900', padding: '2px 6px', borderRadius: '4px' }}>⚙️ FÓRMULA AUTOMÁTICA</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
           </div>
         )}
 
-        {/* PESTAÑA: NUEVO PEDIDO FORMULARIO CARTA */}
+        {/* PESTAÑA: FORMULARIO CARTA DERECHO */}
         {pestana === 'NUEVO_PEDIDO' && (
           <div id="hoja-pedido-oficial" style={{ backgroundColor: '#ffffff', color: '#000000', padding: '10px', borderRadius: '0px', border: 'none', boxSizing: 'border-box', maxWidth: '794px', margin: '0 auto', width: '100%' }}>
             
-            {/* 1. ENCABEZADO INSTITUCIONAL */}
+            {/* ENCABEZADO INSTITUCIONAL */}
             <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 2.5fr 1.4fr', border: '2px solid #000000', marginBottom: '-2px', boxSizing: 'border-box' }}>
               <div style={{ padding: '8px', borderRight: '2px solid #000000', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                 <h2 style={{ fontSize: '1.5rem', fontWeight: '900', margin: 0, color: '#dc2626' }}>fj kids</h2>
@@ -442,9 +340,8 @@ export default function Home() {
               </div>
             </div>
 
-            {/* 2. REPARTICIÓN PROPORCIONAL 70% / 30% EXACTA EN DATOS DE CLIENTE */}
+            {/* DATOS CLIENTE 70% / 30% */}
             <div style={{ display: 'grid', gridTemplateColumns: '7fr 3fr', border: '2px solid #000000', fontSize: '9.5px', fontWeight: '900', marginBottom: '-2px', boxSizing: 'border-box', overflow: 'hidden' }}>
-              
               <div style={{ borderRight: '2px solid #000000', boxSizing: 'border-box' }}>
                 <div style={{ borderBottom: '2px solid #000000', padding: '4px 8px', display: 'flex', alignItems: 'center' }}>
                   <span style={{ width: '110px', color: '#000000', fontWeight: '900' }}>👤 SEÑOR(ES)</span>
@@ -510,7 +407,7 @@ export default function Home() {
               </div>
             </div>
 
-            {/* CUADRO MULTI-RENGLÓN DE NOTAS U OBSERVACIONES */}
+            {/* NOTAS / OBSERVACIONES */}
             <div style={{ border: '2px solid #000000', padding: '4px 6px', fontSize: '9.5px', fontWeight: '900', marginBottom: '10px', backgroundColor: '#f8fafc', boxSizing: 'border-box' }}>
               <span style={{ color: '#000000', display: 'block', marginBottom: '2px' }}>📝 NOTAS / OBSERVACIONES:</span>
               <textarea
@@ -521,7 +418,7 @@ export default function Home() {
               />
             </div>
 
-            {/* 3. MATRIZ CON BOTÓN CÁMARA 📷 DEBAJO EN EL MISMO RECUADRO DE N° */}
+            {/* MATRIZ DE TALLAS */}
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '9.5px', textAlign: 'center', border: '2px solid #000000' }}>
                 <thead>
@@ -542,7 +439,6 @@ export default function Home() {
                     <th style={{ padding: '3px', width: '85px' }} rowSpan={5}>NOTA / COLOR</th>
                   </tr>
 
-                  {/* TALLAS MESES */}
                   <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #000000', fontSize: '8px', fontWeight: '900' }}>
                     <th style={{ borderRight: '2px solid #000000', padding: '2px', width: '50px', backgroundColor: '#f1f5f9' }}>MESES</th>
                     <th style={{ borderRight: '1px solid #000000', padding: '2px', width: '28px' }}>0-3</th>
@@ -554,7 +450,6 @@ export default function Home() {
                     <th style={{ padding: '2px', width: '28px' }}></th>
                   </tr>
 
-                  {/* TALLAS BEBÉS */}
                   <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #000000', fontSize: '8px', fontWeight: '900' }}>
                     <th style={{ borderRight: '2px solid #000000', padding: '2px', width: '50px', backgroundColor: '#f1f5f9' }}>BEBÉS</th>
                     <th style={{ borderRight: '1px solid #000000', padding: '1px' }}>2<br/><span style={{ fontSize: '6px', color: '#64748b' }}>6-12</span></th>
@@ -566,7 +461,6 @@ export default function Home() {
                     <th style={{ padding: '1px' }}></th>
                   </tr>
 
-                  {/* TALLAS JUNIOR */}
                   <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #000000', fontSize: '8px', fontWeight: '900' }}>
                     <th style={{ borderRight: '2px solid #000000', padding: '2px', width: '50px', backgroundColor: '#f1f5f9' }}>JUNIOR</th>
                     <th style={{ borderRight: '1px solid #000000', padding: '2px' }}>4</th>
@@ -578,7 +472,6 @@ export default function Home() {
                     <th style={{ padding: '2px' }}>16</th>
                   </tr>
 
-                  {/* TALLAS JUVENIL */}
                   <tr style={{ backgroundColor: '#f8fafc', borderBottom: '2px solid #000000', fontSize: '8px', fontWeight: '900' }}>
                     <th style={{ borderRight: '2px solid #000000', padding: '2px', width: '50px', backgroundColor: '#f1f5f9' }}>JUVENIL</th>
                     <th style={{ borderRight: '1px solid #000000', padding: '2px' }}>18</th>
@@ -601,7 +494,6 @@ export default function Home() {
                     return (
                       <tr key={idx} style={{ borderBottom: '1px solid #000000' }}>
                         
-                        {/* CELDA N° CON NÚMERO Y CÁMARA 📷 EMBEBIDA */}
                         <td style={{ padding: '2px', borderRight: '2px solid #000000', verticalAlign: 'middle' }}>
                           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
                             <span style={{ fontWeight: '900', fontSize: '10px' }}>{idx + 1}</span>
@@ -683,7 +575,7 @@ export default function Home() {
               </table>
             </div>
 
-            {/* 4. RESUMEN AGRUPADO POR CATEGORÍA Y TOTAL GENERAL */}
+            {/* RESUMEN CATEGORÍAS & TOTAL GENERAL */}
             <div style={{ marginTop: '12px', borderTop: '2px solid #000000', paddingTop: '8px' }}>
               <h4 style={{ fontSize: '9.5px', fontWeight: '900', margin: '0 0 6px 0', textTransform: 'uppercase' }}>
                 📦 Resumen por Categoría · {clienteNombre}
@@ -722,11 +614,6 @@ export default function Home() {
                 </tbody>
               </table>
 
-              {/* ALERTAS VISUALES CHULITOS Y EQUIS */}
-              <span style={{ fontSize: '8.5px', fontWeight: 'bold', color: '#000000', display: 'block', marginBottom: '4px' }}>
-                🎯 Categorías de este pedido ({categoriasEnPedido.length} de {categoriasMaster.length} pedidas):
-              </span>
-
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '4px', fontSize: '7.5px', fontWeight: 'bold' }}>
                 {categoriasMaster.map((catName, mIdx) => {
                   const solicitada = categoriasEnPedido.includes(catName);
@@ -745,7 +632,7 @@ export default function Home() {
               </div>
             </div>
 
-            {/* 5. PIE DE PÁGINA CON CRÉDITOS DE PEQUIX */}
+            {/* PIE DE PÁGINA PEQUIX */}
             <div style={{ borderTop: '2px solid #000000', marginTop: '10px', paddingTop: '6px', textAlign: 'center', fontSize: '8.5px', color: '#000000', fontWeight: 'bold' }}>
               <p style={{ margin: 0 }}>
                 🚀 Desarrollado por <strong>Pequix</strong> · Teléfono: <strong>333 254 1133</strong> · Medellín, Colombia
@@ -755,54 +642,41 @@ export default function Home() {
           </div>
         )}
 
-        {/* MODAL FLOTANTE AMPLIO DE FOTO */}
-        {modalFoto && (
-          <div className="no-print" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, padding: '20px' }}>
-            <div style={{ backgroundColor: '#ffffff', color: '#0f172a', borderRadius: '18px', padding: '20px', maxWidth: '480px', width: '100%', display: 'flex', flexDirection: 'column', gap: '10px', position: 'relative', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.5)' }}>
+        {/* TIQUETE ADHESIVO IMPRESO (SÓLO CUANDO SE SOLICITA IMPRIMIR TIQUETE) */}
+        {tiqueteImpresion && (
+          <div className="printable-tiquete-only" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, padding: '20px' }}>
+            <div style={{ backgroundColor: '#ffffff', color: '#000000', border: '3px solid #000000', padding: '20px', borderRadius: '12px', maxWidth: '420px', width: '100%', display: 'flex', flexDirection: 'column', gap: '10px', position: 'relative' }}>
               
-              <button
-                onClick={() => setModalFoto(null)}
-                style={{ position: 'absolute', top: '15px', right: '15px', border: 'none', background: '#cbd5e1', borderRadius: '50%', width: '30px', height: '32px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px' }}
-              >
-                ✕
-              </button>
+              <button onClick={() => setTiqueteImpresion(null)} className="no-print" style={{ position: 'absolute', top: '10px', right: '10px', border: 'none', background: '#e2e8f0', borderRadius: '50%', width: '28px', height: '28px', cursor: 'pointer', fontWeight: 'bold' }}>✕</button>
 
-              <div style={{ textAlign: 'center' }}>
-                <span style={{ backgroundColor: '#1e3a8a', color: '#38bdf8', fontSize: '10px', fontWeight: '900', padding: '3px 8px', borderRadius: '4px' }}>
-                  REFERENCIA: {modalFoto.referencia} · {modalFoto.curva}
-                </span>
-                <h3 style={{ fontSize: '1.1rem', fontWeight: '900', margin: '4px 0 0 0' }}>{modalFoto.descripcion}</h3>
+              <div style={{ textAlignment: 'center', borderBottom: '2px solid #000', paddingBottom: '8px' }}>
+                <h2 style={{ margin: 0, fontSize: '1.4rem', fontWeight: '900', color: '#dc2626' }}>FJ KIDS S.A.S</h2>
+                <p style={{ margin: '2px 0 0 0', fontSize: '9px', fontWeight: 'bold' }}>DESPACHO B2B NACIONAL · ITAGÜÍ, ANTIOQUIA</p>
               </div>
 
-              <div style={{ width: '100%', height: '260px', borderRadius: '12px', overflow: 'hidden', backgroundColor: '#f1f5f9', border: '1px solid #cbd5e1' }}>
-                <img src={modalFoto.imagenUrl} alt={modalFoto.descripcion} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              <div style={{ fontSize: '12px', fontWeight: '900', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <span style={{ fontSize: '14px', color: '#1e3a8a' }}>DESTINATARIO / EMPRESA:</span>
+                <span style={{ fontSize: '16px', color: '#dc2626' }}>{tiqueteImpresion.cliente}</span>
+                <span>NIT / C.C.: {tiqueteImpresion.nit}</span>
+                <span>DIRECCIÓN: {tiqueteImpresion.direccion}</span>
+                <span>DESTINO: {tiqueteImpresion.ciudad}</span>
+                <span>TEL / CEL: {tiqueteImpresion.telefono}</span>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #e2e8f0', paddingTop: '8px' }}>
+              <div style={{ borderTop: '2px solid #000', paddingTop: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                  <span style={{ fontSize: '8.5px', fontWeight: 'bold', color: '#64748b', display: 'block' }}>COLORES EN STOCK:</span>
-                  <div style={{ display: 'flex', gap: '4px', marginTop: '2px' }}>
-                    {modalFoto.colores.map((c, idx) => (
-                      <span key={idx} style={{ backgroundColor: c.bg, color: c.text, padding: '2px 6px', borderRadius: '3px', fontSize: '8px', fontWeight: '900', border: '1px solid #cbd5e1' }}>
-                        {c.nombre}
-                      </span>
-                    ))}
-                  </div>
+                  <span style={{ fontSize: '10px', fontWeight: 'bold' }}>TRANSPORTADORA:</span>
+                  <h3 style={{ margin: 0, fontSize: '1.2rem', color: '#059669' }}>{tiqueteImpresion.transportadora}</h3>
                 </div>
 
                 <div style={{ textAlign: 'right' }}>
-                  <span style={{ fontSize: '8.5px', fontWeight: 'bold', color: '#64748b' }}>PRECIO {listaActiva}:</span>
-                  <div style={{ fontSize: '1rem', fontWeight: '900', color: '#059669' }}>
-                    $ {modalFoto.preciosPorLista[listaActiva].toLocaleString('es-CO')}
-                  </div>
+                  <span style={{ fontSize: '10px', fontWeight: 'bold' }}>N° GUÍA TRACKING:</span>
+                  <p style={{ margin: 0, fontSize: '1.1rem', fontWeight: '900', color: '#dc2626', fontFamily: 'monospace' }}>{tiqueteImpresion.guiaTracking}</p>
                 </div>
               </div>
 
-              <button
-                onClick={() => setModalFoto(null)}
-                style={{ width: '100%', padding: '10px', backgroundColor: '#10b981', color: '#022c22', border: 'none', borderRadius: '10px', fontWeight: '900', cursor: 'pointer', fontSize: '11px' }}
-              >
-                ✏️ Cerrar Ficha / Editar Cantidades
+              <button onClick={() => window.print()} className="no-print" style={{ width: '100%', padding: '10px', backgroundColor: '#10b981', color: '#022c22', border: 'none', borderRadius: '8px', fontWeight: '900', cursor: 'pointer', fontSize: '12px', marginTop: '10px' }}>
+                🖨️ Imprimir Tiquete Adhesivo
               </button>
             </div>
           </div>
@@ -810,7 +684,7 @@ export default function Home() {
 
       </div>
 
-      {/* ESTILOS DE IMPRESIÓN EXCLUSIVOS */}
+      {/* ESTILOS DE IMPRESIÓN */}
       <style jsx global>{`
         @media print {
           @page {
