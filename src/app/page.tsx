@@ -187,7 +187,7 @@ export default function Home() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#090d16', color: '#f8fafc', padding: '15px', fontFamily: 'sans-serif' }}>
+    <div className="app-container" style={{ minHeight: '100vh', backgroundColor: '#090d16', color: '#f8fafc', padding: '15px', fontFamily: 'sans-serif' }}>
       <div style={{ maxWidth: '1350px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '15px' }}>
         
         {/* CONTROLES SUPERIORES (INVISIBLES EN PDF) */}
@@ -440,7 +440,6 @@ export default function Home() {
                         </div>
                       </td>
 
-                      {/* REF LIMPIA Y DESTACADA */}
                       <td style={{ padding: '3px', fontWeight: '900', borderRight: '2px solid #000000', fontSize: '10px' }}>
                         {f.referencia}
                       </td>
@@ -449,7 +448,6 @@ export default function Home() {
                         {f.descripcion}
                       </td>
 
-                      {/* SELECTOR DE CURVA */}
                       <td style={{ borderRight: '2px solid #000000', padding: '1px', backgroundColor: '#f8fafc' }}>
                         <select
                           value={f.curva}
@@ -463,7 +461,6 @@ export default function Home() {
                         </select>
                       </td>
 
-                      {/* CAJONCITOS INDEPENDIENTES CON TECLA ENTER EXCEL */}
                       {columnasTallasMaster.map((_, cIdx) => {
                         const tName = tallasLista[cIdx];
                         const inputKey = `${idx}-${cIdx}`;
@@ -496,7 +493,6 @@ export default function Home() {
                         $ {valorTotal.toLocaleString('es-CO')}
                       </td>
                       
-                      {/* NOTA DE COLOR CON FONDO IMPRESO REAL */}
                       <td style={{ padding: '3px', textAlign: 'center' }}>
                         {f.colores.map((c, cIdx) => (
                           <span key={cIdx} style={{ backgroundColor: c.bg, color: c.text, padding: '2px 5px', borderRadius: '3px', fontSize: '7.5px', fontWeight: '900', display: 'inline-block', border: '1px solid #000000', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
@@ -511,7 +507,7 @@ export default function Home() {
             </table>
           </div>
 
-          {/* 4. RESUMEN POR CATEGORÍA Y TOTAL GENERAL */}
+          {/* 4. RESUMEN AGRUPADO POR CATEGORÍA Y TOTAL GENERAL */}
           <div style={{ marginTop: '12px', borderTop: '2px solid #000000', paddingTop: '8px' }}>
             <h4 style={{ fontSize: '9.5px', fontWeight: '900', margin: '0 0 6px 0', textTransform: 'uppercase' }}>
               📦 Resumen por Categoría · {clienteNombre}
@@ -637,19 +633,20 @@ export default function Home() {
 
       </div>
 
-      {/* ESTILOS DE IMPRESIÓN */}
+      {/* ESTILOS DE IMPRESIÓN EXCLUSIVOS QUE ELIMINAN CUALQUIER FONDO O SOMBRA NEGRA */}
       <style jsx global>{`
         @media print {
           @page {
             size: letter portrait;
-            margin: 5mm;
+            margin: 4mm;
+          }
+          html, body, .app-container {
+            background-color: #ffffff !important;
+            color: #000000 !important;
+            background: #ffffff !important;
           }
           .no-print {
             display: none !important;
-          }
-          body {
-            background-color: #ffffff !important;
-            color: #000000 !important;
           }
           #hoja-pedido-oficial {
             border: none !important;
@@ -658,10 +655,12 @@ export default function Home() {
             max-width: 100% !important;
             padding: 0 !important;
             margin: 0 !important;
+            background-color: #ffffff !important;
           }
           * {
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
+            box-shadow: none !important;
           }
         }
       `}</style>
