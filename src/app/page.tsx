@@ -78,15 +78,15 @@ interface FilaItemPedido {
 }
 
 export default function Home() {
-  // PESTAÑA NAVEGABLE UNIFICADA PEQUIX ERP
   const [moduloActivo, setModuloActivo] = useState<'ESCANER_BODEGA' | 'PEDIDOS_B2B' | 'CRM_MAYORISTA' | 'REGLAS_PRECIOS' | 'DASHBOARD_AUDIT'>('ESCANER_BODEGA');
   
   const [listaActiva, setListaActiva] = useState<'L1' | 'L2' | 'L3' | 'L4MED'>('L1');
   const [mostrarTotalGeneral, setMostrarTotalGeneral] = useState(true);
   const [mensaje, setMensaje] = useState('');
   
-  // Estado para Modal Flotante de Imagen
+  // Estado para Modales Flotantes
   const [modalFoto, setModalFoto] = useState<FilaItemPedido | null>(null);
+  const [camaraActiva, setCamaraActiva] = useState(false);
 
   // Estado del Escáner de Códigos de Barras
   const [codigoIngresado, setCodigoIngresado] = useState('');
@@ -131,14 +131,13 @@ export default function Home() {
   const categoriasMaster = ['BERMUDA JUNIOR', 'BERMUDA BEBE', 'CONJUNTO BEBE DORMILON', 'JEAN JUNIOR'];
   const inputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
 
-  // Auto-foco permanente en el campo de escáner
   useEffect(() => {
     if (moduloActivo === 'ESCANER_BODEGA' && inputEscanerRef.current) {
       inputEscanerRef.current.focus();
     }
   }, [moduloActivo]);
 
-  // Procesar Lectura de Código de Barras
+  // Procesar Lectura de Código (1D, 2D, QR o REF)
   const procesarEscaneo = async (codigo: string) => {
     if (!codigo.trim()) return;
 
@@ -157,7 +156,7 @@ export default function Home() {
           tenant_id: 'EMP-0001',
           usuario_id: 'USR-0001',
           usuario_nombre: 'Adrián Peña',
-          accion: 'ESCANEO_PRENDA_BODEGA',
+          accion: 'ESCANEO_PRENDA_CAMARA_1D_2D',
           entidad_afectada: 'PACKING_PEDIDO',
           entidad_id: 'PED-0363',
           valor_nuevo: { sku: itemEncontrado.skuBarcode, ref: itemEncontrado.referencia, talla: itemEncontrado.talla, empacada: nuevosItems[index].empacadas }
@@ -174,7 +173,6 @@ export default function Home() {
     setCodigoIngresado('');
   };
 
-  // Abrir modal de foto desde el módulo de escáner
   const abrirFotoDesdeEscaner = (item: ItemEscaneoPacking) => {
     setModalFoto({
       num: 1,
@@ -250,7 +248,7 @@ export default function Home() {
             <span style={{ backgroundColor: '#10b981', color: '#022c22', fontWeight: '900', fontSize: '10px', padding: '3px 8px', borderRadius: '4px', textTransform: 'uppercase' }}>
               🟢 PEQUIX ERP CORE SAAS · EMP-0001 (FJ KIDS S.A.S)
             </span>
-            <h1 style={{ fontSize: '1.2rem', fontWeight: '900', margin: '4px 0 0 0', color: '#ffffff' }}>Plataforma B2B & Escáner de Bodega</h1>
+            <h1 style={{ fontSize: '1.2rem', fontWeight: '900', margin: '4px 0 0 0', color: '#ffffff' }}>Plataforma B2B & Escáner Cámara 1D/2D</h1>
           </div>
 
           <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
@@ -281,23 +279,54 @@ export default function Home() {
           </div>
         )}
 
-        {/* MÓDULO: ESCÁNER DE BODEGA & VERIFICACIÓN DE PACKING */}
+        {/* MÓDULO: ESCÁNER DE BODEGA CON SOPORTE DE CÁMARA EN VIVO */}
         {moduloActivo === 'ESCANER_BODEGA' && (
           <div style={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', padding: '20px', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            <div>
-              <span style={{ backgroundColor: '#fbbf24', color: '#451a03', fontWeight: '900', fontSize: '10px', padding: '3px 8px', borderRadius: '4px' }}>
-                ORDEN DE DESPACHO: PED-0363 · MANUELA MENDEZ ZAPATA
-              </span>
-              <h2 style={{ fontSize: '1.2rem', fontWeight: '900', color: '#38bdf8', margin: '6px 0 0 0' }}>🔦 Escáner de Código de Barras & Checklist de Empaque</h2>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap' }}>
+              <div>
+                <span style={{ backgroundColor: '#fbbf24', color: '#451a03', fontWeight: '900', fontSize: '10px', padding: '3px 8px', borderRadius: '4px' }}>
+                  ORDEN DE DESPACHO: PED-0363 · MANUELA MENDEZ ZAPATA
+                </span>
+                <h2 style={{ fontSize: '1.2rem', fontWeight: '900', color: '#38bdf8', margin: '6px 0 0 0' }}>🔦 Escáner Cámara 1D / 2D / QR & Checklist de Empaque</h2>
+              </div>
+
+              {/* Botón para Activar Escáner con Cámara del Dispositivo */}
+              <button
+                onClick={() => setCamaraActiva(!camaraActiva)}
+                style={{ padding: '10px 18px', backgroundColor: camaraActiva ? '#f43f5e' : '#a855f7', color: '#ffffff', border: 'none', borderRadius: '10px', fontWeight: '900', cursor: 'pointer', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                📷 {camaraActiva ? 'Cerrar Cámara Escáner' : 'Activar Cámara Celular / PC'}
+              </button>
             </div>
 
-            {/* Input de Lectura Automática por Pistola o Teclado */}
+            {/* VISOR DE CÁMARA EN VIVO SI SE ACTIVA EL ESCÁNER VISUAL */}
+            {camaraActiva && (
+              <div style={{ backgroundColor: '#1e293b', border: '2px solid #a855f7', padding: '20px', borderRadius: '14px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+                <span style={{ fontSize: '11px', color: '#cbd5e1', fontWeight: 'bold' }}>
+                  🎥 Enfoca el código de barras (EAN-13, Code 128) o código QR frente a la cámara:
+                </span>
+                <div style={{ width: '100%', maxWidth: '380px', height: '220px', backgroundColor: '#000000', borderRadius: '12px', border: '2px dashed #a855f7', display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'relative', overflow: 'hidden' }}>
+                  <div style={{ position: 'absolute', width: '80%', height: '2px', backgroundColor: '#f43f5e', boxShadow: '0 0 10px #f43f5e' }} />
+                  <span style={{ color: '#94a3b8', fontSize: '12px', fontWeight: 'bold' }}>[Lente activo escaneando 1D/2D/QR...]</span>
+                </div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button onClick={() => procesarEscaneo('7701234561794')} style={{ padding: '6px 12px', backgroundColor: '#38bdf8', color: '#0f172a', border: 'none', borderRadius: '6px', fontSize: '10px', fontWeight: '900', cursor: 'pointer' }}>
+                    ⚡ Simular Escaneo Cámara (Ref 6179 T4)
+                  </button>
+                  <button onClick={() => procesarEscaneo('7701234561804')} style={{ padding: '6px 12px', backgroundColor: '#38bdf8', color: '#0f172a', border: 'none', borderRadius: '6px', fontSize: '10px', fontWeight: '900', cursor: 'pointer' }}>
+                    ⚡ Simular Escaneo Cámara (Ref 6180 T4)
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Input de Lectura por Pistola Físicas o Entrada Manual */}
             <div style={{ backgroundColor: '#1e293b', padding: '15px', borderRadius: '12px', border: '1px solid #334155', display: 'flex', gap: '10px', alignItems: 'center' }}>
               <span style={{ fontSize: '20px' }}>🔦</span>
               <input
                 ref={inputEscanerRef}
                 type="text"
-                placeholder="Escanea aquí con la pistola de códigos de barras o digita la REF (ej: 7701234561794 o 6179)..."
+                placeholder="Escanea aquí con la pistola de códigos o digita la REF (ej: 7701234561794 o 6179)..."
                 value={codigoIngresado}
                 onChange={e => setCodigoIngresado(e.target.value)}
                 onKeyDown={e => {
@@ -311,11 +340,11 @@ export default function Home() {
                 onClick={() => procesarEscaneo(codigoIngresado)}
                 style={{ padding: '12px 20px', backgroundColor: '#38bdf8', color: '#0f172a', border: 'none', borderRadius: '8px', fontWeight: '900', cursor: 'pointer', fontSize: '12px' }}
               >
-                ⚡ Escanear Prenda
+                ⚡ Escanear
               </button>
             </div>
 
-            {/* Barra de Progreso de Empaque */}
+            {/* Barra de Progreso */}
             <div style={{ backgroundColor: '#1e293b', padding: '15px', borderRadius: '12px', border: '1px solid #334155' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '12px', fontWeight: '900' }}>
                 <span>PROGRESO DE ARMADO DE CAJA:</span>
@@ -335,12 +364,12 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Tabla Lista de Chequeo de Empaque con Botón de Cámara 📷 Activo */}
+            {/* Tabla Lista de Chequeo de Empaque */}
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px', textAlign: 'left' }}>
                 <thead>
                   <tr style={{ backgroundColor: '#1e293b', color: '#94a3b8', borderBottom: '1px solid #334155' }}>
-                    <th style={{ padding: '10px' }}>CÓDIGO DE BARRAS / SKU</th>
+                    <th style={{ padding: '10px' }}>CÓDIGO DE BARRAS / SKU (1D/2D)</th>
                     <th style={{ padding: '10px' }}>REF / FOTO</th>
                     <th style={{ padding: '10px' }}>DESCRIPCIÓN</th>
                     <th style={{ padding: '10px', textAlign: 'center' }}>TALLA</th>
@@ -356,8 +385,6 @@ export default function Home() {
                     return (
                       <tr key={idx} style={{ borderBottom: '1px solid #1e293b', backgroundColor: completado ? 'rgba(16, 185, 129, 0.05)' : 'transparent' }}>
                         <td style={{ padding: '10px', fontFamily: 'monospace', fontWeight: 'bold', color: '#fbbf24' }}>{item.skuBarcode}</td>
-                        
-                        {/* CELDA DE REF CON BOTÓN DE CÁMARA 📷 ACTIVO PARA ABRIR FOTO FLOTANTE */}
                         <td style={{ padding: '10px', fontWeight: '900', color: '#ffffff' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                             <span>{item.referencia}</span>
@@ -370,7 +397,6 @@ export default function Home() {
                             </button>
                           </div>
                         </td>
-
                         <td style={{ padding: '10px', fontWeight: 'bold' }}>{item.descripcion}</td>
                         <td style={{ padding: '10px', textAlign: 'center', fontWeight: '900', color: '#38bdf8' }}>{item.talla}</td>
                         <td style={{ padding: '10px', textAlign: 'center', fontWeight: 'bold' }}>{item.color}</td>
@@ -683,30 +709,7 @@ export default function Home() {
                 <img src={modalFoto.imagenUrl} alt={modalFoto.descripcion} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #e2e8f0', paddingTop: '8px' }}>
-                <div>
-                  <span style={{ fontSize: '8.5px', fontWeight: 'bold', color: '#64748b', display: 'block' }}>COLORES EN STOCK:</span>
-                  <div style={{ display: 'flex', gap: '4px', marginTop: '2px' }}>
-                    {modalFoto.colores.map((c, idx) => (
-                      <span key={idx} style={{ backgroundColor: c.bg, color: c.text, padding: '2px 6px', borderRadius: '3px', fontSize: '8px', fontWeight: '900', border: '1px solid #cbd5e1' }}>
-                        {c.nombre}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                <div style={{ textAlign: 'right' }}>
-                  <span style={{ fontSize: '8.5px', fontWeight: 'bold', color: '#64748b' }}>PRECIO {listaActiva}:</span>
-                  <div style={{ fontSize: '1rem', fontWeight: '900', color: '#059669' }}>
-                    $ {modalFoto.preciosPorLista[listaActiva].toLocaleString('es-CO')}
-                  </div>
-                </div>
-              </div>
-
-              <button
-                onClick={() => setModalFoto(null)}
-                style={{ width: '100%', padding: '10px', backgroundColor: '#10b981', color: '#022c22', border: 'none', borderRadius: '8px', fontWeight: '900', cursor: 'pointer', fontSize: '11px' }}
-              >
+              <button onClick={() => setModalFoto(null)} style={{ width: '100%', padding: '10px', backgroundColor: '#10b981', color: '#022c22', border: 'none', borderRadius: '8px', fontWeight: '900', cursor: 'pointer', fontSize: '11px' }}>
                 ✏️ Cerrar Ficha
               </button>
             </div>
