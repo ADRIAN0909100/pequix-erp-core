@@ -54,24 +54,14 @@ const geoColombia: { [key: string]: string[] } = {
   'INTERNACIONAL': ['MIAMI (EE.UU.)', 'PANAMÁ (PA)', 'QUITO (EC)']
 };
 
-interface ClienteCRM {
-  id: string;
-  nombreEmpresa: string;
-  nit: string;
-  contacto: string;
-  celular: string;
-  ciudad: string;
-  listaAsignada: 'L1' | 'L2' | 'L3' | 'L4MED';
-  totalCompradoCOP: number;
-  pedidosRealizados: number;
-  diasSinPedir: number;
-  estadoComercial: 'ACTIVO' | 'EN_RIESGO' | 'INACTIVO';
-}
-
-interface ConfigPreciosTenant {
-  deltaL2: number;
-  margenL3Porcentaje: number;
-  deltaL4MED: number;
+interface ItemEscaneoPacking {
+  skuBarcode: string;
+  referencia: string;
+  descripcion: string;
+  talla: string;
+  color: string;
+  requeridas: number;
+  empacadas: number;
 }
 
 interface FilaItemPedido {
@@ -86,8 +76,8 @@ interface FilaItemPedido {
 }
 
 export default function Home() {
-  // PESTAÑA NAVEGABLE MAESTRA UNIFICADA
-  const [moduloActivo, setModuloActivo] = useState<'PEDIDOS_B2B' | 'CRM_MAYORISTA' | 'REGLAS_PRECIOS' | 'DESPACHOS_BODEGA' | 'DASHBOARD_AUDIT'>('CRM_MAYORISTA');
+  // PESTAÑA NAVEGABLE UNIFICADA PEQUIX ERP
+  const [moduloActivo, setModuloActivo] = useState<'ESCANER_BODEGA' | 'PEDIDOS_B2B' | 'CRM_MAYORISTA' | 'REGLAS_PRECIOS' | 'DASHBOARD_AUDIT'>('ESCANER_BODEGA');
   
   const [listaActiva, setListaActiva] = useState<'L1' | 'L2' | 'L3' | 'L4MED'>('L1');
   const [mostrarTotalGeneral, setMostrarTotalGeneral] = useState(true);
@@ -95,57 +85,20 @@ export default function Home() {
   
   const [modalFoto, setModalFoto] = useState<FilaItemPedido | null>(null);
 
-  // Lista de Clientes CRM B2B
-  const [clientesCRM, setClientesCRM] = useState<ClienteCRM[]>([
-    {
-      id: 'CLI-001',
-      nombreEmpresa: 'MANUELA MENDEZ ZAPATA',
-      nit: '1000207034-1',
-      contacto: 'CAROLINA (SWEET BOYS)',
-      celular: '3005381816',
-      ciudad: 'ITAGÜÍ, ANTIOQUIA',
-      listaAsignada: 'L1',
-      totalCompradoCOP: 18500000,
-      pedidosRealizados: 6,
-      diasSinPedir: 5,
-      estadoComercial: 'ACTIVO'
-    },
-    {
-      id: 'CLI-002',
-      nombreEmpresa: 'EL PALACIO DE LA PANTALETA #1',
-      nit: '900.123.456-7',
-      contacto: 'GUSTAVO PÉREZ',
-      celular: '3116549870',
-      ciudad: 'MONTERÍA, CÓRDOBA',
-      listaAsignada: 'L1',
-      totalCompradoCOP: 42000000,
-      pedidosRealizados: 12,
-      diasSinPedir: 45,
-      estadoComercial: 'EN_RIESGO'
-    },
-    {
-      id: 'CLI-003',
-      nombreEmpresa: 'VARIEDADES Y NOVEDADES INFANTILES',
-      nit: '800.887.654-2',
-      contacto: 'MARÍA VILLEGAS',
-      celular: '3128920808',
-      ciudad: 'SINCELEJO, SUCRE',
-      listaAsignada: 'L2',
-      totalCompradoCOP: 12300000,
-      pedidosRealizados: 4,
-      diasSinPedir: 75,
-      estadoComercial: 'INACTIVO'
-    }
+  // Estado del Escáner de Códigos de Barras
+  const [codigoIngresado, setCodigoIngresado] = useState('');
+  const inputEscanerRef = useRef<HTMLInputElement | null>(null);
+
+  // Lista de Ítems a Empacar por Escáner para Pedido PED-0363
+  const [itemsPacking, setItemsPacking] = useState<ItemEscaneoPacking[]>([
+    { skuBarcode: '7701234561794', referencia: '6179', descripcion: 'BERMUDA JUNIOR', talla: '4', color: 'AZUL', requeridas: 2, empacadas: 0 },
+    { skuBarcode: '7701234561796', referencia: '6179', descripcion: 'BERMUDA JUNIOR', talla: '6', color: 'AZUL', requeridas: 2, empacadas: 0 },
+    { skuBarcode: '7701234561798', referencia: '6179', descripcion: 'BERMUDA JUNIOR', talla: '8', color: 'AZUL', requeridas: 3, empacadas: 0 },
+    { skuBarcode: '7701234561804', referencia: '6180', descripcion: 'BERMUDA JUNIOR', talla: '4', color: 'AZUL', requeridas: 2, empacadas: 0 },
+    { skuBarcode: '7701234561814', referencia: '6181', descripcion: 'BERMUDA JUNIOR', talla: '4', color: 'AZUL', requeridas: 2, empacadas: 0 }
   ]);
 
-  // Parámetros Globales Tenant
-  const [configPrecios, setConfigPrecios] = useState<ConfigPreciosTenant>({
-    deltaL2: 1000,
-    margenL3Porcentaje: 70,
-    deltaL4MED: -2000
-  });
-
-  // Datos Encabezado Pedido (MAYÚSCULAS)
+  // Datos Encabezado Pedido
   const [clienteNombre, setClienteNombre] = useState('MANUELA MENDEZ ZAPATA');
   const [nitCliente, setNitCliente] = useState('1000207034-1');
   const [almacen, setAlmacen] = useState('SWEET BOYS');
@@ -172,7 +125,51 @@ export default function Home() {
     { num: 3, referencia: '6181', descripcion: 'BERMUDA JUNIOR', curva: 'JUNIOR', tallasMap: { '4': 2, '6': 2, '8': 3, '10': 4, '12': 4, '14': 4 }, preciosPorLista: { L1: 56900, L2: 57900, L3: 96900, L4MED: 54900 }, colores: [{ nombre: 'AZUL', bg: '#2563eb', text: '#ffffff' }], imagenUrl: 'https://images.unsplash.com/photo-1503919545889-aef636e10ad4?w=600&q=80' }
   ]);
 
+  const categoriasMaster = ['BERMUDA JUNIOR', 'BERMUDA BEBE', 'CONJUNTO BEBE DORMILON', 'JEAN JUNIOR'];
   const inputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
+
+  // Auto-foco permanente en el campo de escáner
+  useEffect(() => {
+    if (moduloActivo === 'ESCANER_BODEGA' && inputEscanerRef.current) {
+      inputEscanerRef.current.focus();
+    }
+  }, [moduloActivo]);
+
+  // Procesar Lectura de Código de Barras
+  const procesarEscaneo = async (codigo: string) => {
+    if (!codigo.trim()) return;
+
+    const index = itemsPacking.findIndex(item => item.skuBarcode === codigo.trim() || item.referencia === codigo.trim());
+
+    if (index !== -1) {
+      const itemEncontrado = itemsPacking[index];
+
+      if (itemEncontrado.empacadas < itemEncontrado.requeridas) {
+        const nuevosItems = [...itemsPacking];
+        nuevosItems[index].empacadas += 1;
+        setItemsPacking(nuevosItems);
+
+        // Registro Inmutable en Audit Log
+        await supabase.from('audit_logs').insert([{
+          tenant_id: 'EMP-0001',
+          usuario_id: 'USR-0001',
+          usuario_nombre: 'Adrián Peña',
+          accion: 'ESCANEO_PRENDA_BODEGA',
+          entidad_afectada: 'PACKING_PEDIDO',
+          entidad_id: 'PED-0363',
+          valor_nuevo: { sku: itemEncontrado.skuBarcode, ref: itemEncontrado.referencia, talla: itemEncontrado.talla, empacada: nuevosItems[index].empacadas }
+        }]);
+
+        setMensaje(`🟢 ¡ESCANEO CORRECTO! Ref: ${itemEncontrado.referencia} - Talla ${itemEncontrado.talla} (${nuevosItems[index].empacadas}/${itemEncontrado.requeridas})`);
+      } else {
+        setMensaje(`⚠️ ALERTA: La cantidad requerida para la Ref ${itemEncontrado.referencia} Talla ${itemEncontrado.talla} ya fue completada.`);
+      }
+    } else {
+      setMensaje(`🔴 ERROR: El código escaneado (${codigo}) NO pertenece al Pedido PED-0363.`);
+    }
+
+    setCodigoIngresado('');
+  };
 
   const cambiarTallaValor = (idx: number, keyTalla: string, val: number) => {
     setFilas(prev => prev.map((f, i) => i === idx ? { ...f, tallasMap: { ...f.tallasMap, [keyTalla]: Math.max(0, val) } } : f));
@@ -188,32 +185,10 @@ export default function Home() {
   const totalPrendasGeneral = () => filas.reduce((acc, f) => acc + totalPrendasFila(f), 0);
   const totalValorGeneral = () => filas.reduce((acc, f) => acc + totalValorFila(f), 0);
 
+  const totalEmpacadasGeneral = () => itemsPacking.reduce((acc, item) => acc + item.empacadas, 0);
+  const totalRequeridasGeneral = () => itemsPacking.reduce((acc, item) => acc + item.requeridas, 0);
+
   const categoriasEnPedido = Array.from(new Set(filas.map(f => f.descripcion)));
-
-  // Reasignar Lista de Precios a Cliente CRM
-  const cambiarListaCliente = async (clienteId: string, nuevaLista: 'L1' | 'L2' | 'L3' | 'L4MED') => {
-    setClientesCRM(prev => prev.map(c => c.id === clienteId ? { ...c, listaAsignada: nuevaLista } : c));
-
-    // Audit Log en Supabase
-    await supabase.from('audit_logs').insert([{
-      tenant_id: 'EMP-0001',
-      usuario_id: 'USR-0001',
-      usuario_nombre: 'Adrián Peña',
-      accion: 'ASIGNAR_LISTA_PRECIO_CLIENTE',
-      entidad_afectada: 'CLIENTES_CRM',
-      entidad_id: clienteId,
-      valor_nuevo: { lista: nuevaLista }
-    }]);
-
-    setMensaje(`🏷️ Lista de precio ${nuevaLista} asignada al cliente ${clienteId}.`);
-  };
-
-  // Enviar Saludo / Reenganche por WhatsApp API
-  const enviarWhatsAppReactivacion = (cliente: ClienteCRM) => {
-    const texto = `¡Hola, ${cliente.contacto}! 🚀 Te saluda Adrián Peña de FJ KIDS. Queremos presentarte la nueva colección de ropa infantil B2B con precios especiales en Peso Colombiano ($ COP). ¿Te envío la muestra digital?`;
-    const url = `https://wa.me/57${cliente.celular}?text=${encodeURIComponent(texto)}`;
-    window.open(url, '_blank');
-  };
 
   const manejarKeyDownExcel = (e: React.KeyboardEvent, filaIdx: number, colIdx: number, valActual: number) => {
     const tallasLista = mapaTallasCurva[filas[filaIdx].curva].filter(t => t !== '');
@@ -258,33 +233,22 @@ export default function Home() {
             <span style={{ backgroundColor: '#10b981', color: '#022c22', fontWeight: '900', fontSize: '10px', padding: '3px 8px', borderRadius: '4px', textTransform: 'uppercase' }}>
               🟢 PEQUIX ERP CORE SAAS · EMP-0001 (FJ KIDS S.A.S)
             </span>
-            <h1 style={{ fontSize: '1.2rem', fontWeight: '900', margin: '4px 0 0 0', color: '#ffffff' }}>Plataforma B2B & CRM Mayorista</h1>
+            <h1 style={{ fontSize: '1.2rem', fontWeight: '900', margin: '4px 0 0 0', color: '#ffffff' }}>Plataforma B2B & Escáner de Bodega</h1>
           </div>
 
           <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
-            <button onClick={() => setModuloActivo('CRM_MAYORISTA')} style={{ padding: '8px 12px', borderRadius: '8px', border: 'none', fontWeight: 'bold', fontSize: '11px', cursor: 'pointer', backgroundColor: moduloActivo === 'CRM_MAYORISTA' ? '#38bdf8' : '#1e293b', color: moduloActivo === 'CRM_MAYORISTA' ? '#0f172a' : '#ffffff' }}>
-              📱 CRM Mayorista
+            <button onClick={() => setModuloActivo('ESCANER_BODEGA')} style={{ padding: '8px 12px', borderRadius: '8px', border: 'none', fontWeight: 'bold', fontSize: '11px', cursor: 'pointer', backgroundColor: moduloActivo === 'ESCANER_BODEGA' ? '#38bdf8' : '#1e293b', color: moduloActivo === 'ESCANER_BODEGA' ? '#0f172a' : '#ffffff' }}>
+              🔦 Escáner Bodega
             </button>
             <button onClick={() => setModuloActivo('PEDIDOS_B2B')} style={{ padding: '8px 12px', borderRadius: '8px', border: 'none', fontWeight: 'bold', fontSize: '11px', cursor: 'pointer', backgroundColor: moduloActivo === 'PEDIDOS_B2B' ? '#10b981' : '#1e293b', color: moduloActivo === 'PEDIDOS_B2B' ? '#022c22' : '#ffffff' }}>
               📋 Pedidos B2B
             </button>
-            <button onClick={() => setModuloActivo('REGLAS_PRECIOS')} style={{ padding: '8px 12px', borderRadius: '8px', border: 'none', fontWeight: 'bold', fontSize: '11px', cursor: 'pointer', backgroundColor: moduloActivo === 'REGLAS_PRECIOS' ? '#a855f7' : '#1e293b', color: '#ffffff' }}>
-              ⚙️ Precios L1-L4
+            <button onClick={() => setModuloActivo('CRM_MAYORISTA')} style={{ padding: '8px 12px', borderRadius: '8px', border: 'none', fontWeight: 'bold', fontSize: '11px', cursor: 'pointer', backgroundColor: moduloActivo === 'CRM_MAYORISTA' ? '#a855f7' : '#1e293b', color: '#ffffff' }}>
+              📱 CRM Mayorista
             </button>
-            <button onClick={() => setModuloActivo('DESPACHOS_BODEGA')} style={{ padding: '8px 12px', borderRadius: '8px', border: 'none', fontWeight: 'bold', fontSize: '11px', cursor: 'pointer', backgroundColor: moduloActivo === 'DESPACHOS_BODEGA' ? '#fbbf24' : '#1e293b', color: '#451a03' }}>
-              🚚 Bodega
+            <button onClick={() => setModuloActivo('DASHBOARD_AUDIT')} style={{ padding: '8px 12px', borderRadius: '8px', border: 'none', fontWeight: 'bold', fontSize: '11px', cursor: 'pointer', backgroundColor: moduloActivo === 'DASHBOARD_AUDIT' ? '#fbbf24' : '#1e293b', color: '#451a03' }}>
+              📊 Dashboard
             </button>
-
-            {/* SELECTOR PRIVADO DE LISTAS L1-L4MED */}
-            {moduloActivo === 'PEDIDOS_B2B' && (
-              <div style={{ display: 'flex', gap: '4px', backgroundColor: '#1e293b', padding: '4px', borderRadius: '8px', border: '1px solid #334155' }}>
-                {(['L1', 'L2', 'L3', 'L4MED'] as const).map(l => (
-                  <button key={l} onClick={() => setListaActiva(l)} style={{ padding: '4px 8px', borderRadius: '6px', border: 'none', fontWeight: '900', fontSize: '10px', cursor: 'pointer', backgroundColor: listaActiva === l ? '#38bdf8' : 'transparent', color: listaActiva === l ? '#0f172a' : '#cbd5e1' }}>
-                    {l === 'L4MED' ? 'L4 MED' : l}
-                  </button>
-                ))}
-              </div>
-            )}
 
             {moduloActivo === 'PEDIDOS_B2B' && (
               <button onClick={() => window.print()} style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', backgroundColor: '#10b981', color: '#022c22', fontWeight: '900', fontSize: '11px', cursor: 'pointer' }}>
@@ -300,88 +264,106 @@ export default function Home() {
           </div>
         )}
 
-        {/* MÓDULO: CRM & SEGUIMIENTO MAYORISTA B2B */}
-        {moduloActivo === 'CRM_MAYORISTA' && (
+        {/* MÓDULO: ESCÁNER DE BODEGA & VERIFICACIÓN DE PACKING */}
+        {moduloActivo === 'ESCANER_BODEGA' && (
           <div style={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', padding: '20px', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
             <div>
-              <h2 style={{ fontSize: '1.2rem', fontWeight: '900', color: '#38bdf8', margin: 0 }}>📱 CRM de Clientes Mayoristas B2B & Radar de Reenganche</h2>
-              <p style={{ fontSize: '12px', color: '#94a3b8', margin: '4px 0 0 0' }}>Monitorea el consumo acumulado en $ COP, días sin pedir y reactiva clientes por WhatsApp API.</p>
+              <span style={{ backgroundColor: '#fbbf24', color: '#451a03', fontWeight: '900', fontSize: '10px', padding: '3px 8px', borderRadius: '4px' }}>
+                ORDEN DE DESPACHO: PED-0363 · MANUELA MENDEZ ZAPATA
+              </span>
+              <h2 style={{ fontSize: '1.2rem', fontWeight: '900', color: '#38bdf8', margin: '6px 0 0 0' }}>🔦 Escáner de Código de Barras & Checklist de Empaque</h2>
             </div>
 
-            {/* TABLA RADAR DE CLIENTES */}
+            {/* Input de Lectura Automática por Pistola o Teclado */}
+            <div style={{ backgroundColor: '#1e293b', padding: '15px', borderRadius: '12px', border: '1px solid #334155', display: 'flex', gap: '10px', alignItems: 'center' }}>
+              <span style={{ fontSize: '20px' }}>🔦</span>
+              <input
+                ref={inputEscanerRef}
+                type="text"
+                placeholder="Escanea aquí con la pistola de códigos de barras o digita la REF (ej: 7701234561794 o 6179)..."
+                value={codigoIngresado}
+                onChange={e => setCodigoIngresado(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
+                    procesarEscaneo(codigoIngresado);
+                  }
+                }}
+                style={{ flex: 1, backgroundColor: '#0f172a', border: '2px solid #38bdf8', color: '#ffffff', padding: '12px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: 'bold', outline: 'none' }}
+              />
+              <button
+                onClick={() => procesarEscaneo(codigoIngresado)}
+                style={{ padding: '12px 20px', backgroundColor: '#38bdf8', color: '#0f172a', border: 'none', borderRadius: '8px', fontWeight: '900', cursor: 'pointer', fontSize: '12px' }}
+              >
+                ⚡ Escanear Prenda
+              </button>
+            </div>
+
+            {/* Barra de Progreso de Empaque */}
+            <div style={{ backgroundColor: '#1e293b', padding: '15px', borderRadius: '12px', border: '1px solid #334155' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '12px', fontWeight: '900' }}>
+                <span>PROGRESO DE ARMANADO DE CAJA:</span>
+                <span style={{ color: totalEmpacadasGeneral() === totalRequeridasGeneral() ? '#10b981' : '#fbbf24' }}>
+                  {totalEmpacadasGeneral()} / {totalRequeridasGeneral()} Prendas Empacadas
+                </span>
+              </div>
+              <div style={{ width: '100%', height: '12px', backgroundColor: '#0f172a', borderRadius: '6px', overflow: 'hidden' }}>
+                <div
+                  style={{
+                    width: `${(totalEmpacadasGeneral() / totalRequeridasGeneral()) * 100}%`,
+                    height: '100%',
+                    backgroundColor: totalEmpacadasGeneral() === totalRequeridasGeneral() ? '#10b981' : '#38bdf8',
+                    transition: 'width 0.3s ease'
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Tabla Lista de Chequeo de Empaque */}
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px', textAlign: 'left' }}>
                 <thead>
                   <tr style={{ backgroundColor: '#1e293b', color: '#94a3b8', borderBottom: '1px solid #334155' }}>
-                    <th style={{ padding: '10px' }}>EMPRESA / CLIENTE</th>
-                    <th style={{ padding: '10px' }}>UBICACIÓN</th>
-                    <th style={{ padding: '10px' }}>LISTA ASIGNADA</th>
-                    <th style={{ padding: '10px', textAlign: 'right' }}>COMPRAS ACUMULADAS ($ COP)</th>
-                    <th style={{ padding: '10px', textAlign: 'center' }}>DÍAS SIN PEDIR</th>
-                    <th style={{ padding: '10px', textAlign: 'center' }}>ESTADO COMERCIAL</th>
-                    <th style={{ padding: '10px', textAlign: 'center' }}>ACCIÓN RÁPIDA</th>
+                    <th style={{ padding: '10px' }}>CÓDIGO DE BARRAS / SKU</th>
+                    <th style={{ padding: '10px' }}>REF</th>
+                    <th style={{ padding: '10px' }}>DESCRIPCIÓN</th>
+                    <th style={{ padding: '10px', textAlign: 'center' }}>TALLA</th>
+                    <th style={{ padding: '10px', textAlign: 'center' }}>COLOR</th>
+                    <th style={{ padding: '10px', textAlign: 'center' }}>REQUERIDAS</th>
+                    <th style={{ padding: '10px', textAlign: 'center' }}>EMPACADAS</th>
+                    <th style={{ padding: '10px', textAlign: 'center' }}>ESTADO</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {clientesCRM.map((c) => (
-                    <tr key={c.id} style={{ borderBottom: '1px solid #1e293b' }}>
-                      <td style={{ padding: '10px' }}>
-                        <strong style={{ fontSize: '12px', color: '#ffffff', display: 'block' }}>{c.nombreEmpresa}</strong>
-                        <span style={{ fontSize: '10px', color: '#94a3b8' }}>NIT: {c.nit} · Contacto: {c.contacto}</span>
-                      </td>
-
-                      <td style={{ padding: '10px', fontWeight: 'bold', color: '#cbd5e1' }}>
-                        📍 {c.ciudad}
-                      </td>
-
-                      <td style={{ padding: '10px' }}>
-                        <select
-                          value={c.listaAsignada}
-                          onChange={e => cambiarListaCliente(c.id, e.target.value as any)}
-                          style={{ backgroundColor: '#0f172a', color: '#fbbf24', border: '1px solid #334155', borderRadius: '6px', fontWeight: '900', fontSize: '10px', padding: '4px 6px', outline: 'none' }}
-                        >
-                          <option value="L1">L1 (MAYORISTA)</option>
-                          <option value="L2">L2 (DISTRIBUIDOR)</option>
-                          <option value="L3">L3 (DETAL / WEBSITE)</option>
-                          <option value="L4MED">L4 MED (LOCAL)</option>
-                        </select>
-                      </td>
-
-                      <td style={{ padding: '10px', textAlign: 'right', fontWeight: '900', color: '#10b981', fontSize: '12px' }}>
-                        $ {c.totalCompradoCOP.toLocaleString('es-CO')} COP
-                        <span style={{ display: 'block', fontSize: '9px', color: '#94a3b8', fontWeight: 'normal' }}>{c.pedidosRealizados} pedidos en total</span>
-                      </td>
-
-                      <td style={{ padding: '10px', textAlign: 'center', fontWeight: '900', fontSize: '12px', color: c.diasSinPedir > 60 ? '#f43f5e' : c.diasSinPedir > 30 ? '#fbbf24' : '#34d399' }}>
-                        {c.diasSinPedir} días
-                      </td>
-
-                      <td style={{ padding: '10px', textAlign: 'center' }}>
-                        <span style={{
-                          fontSize: '9px',
-                          fontWeight: '900',
-                          padding: '3px 8px',
-                          borderRadius: '6px',
-                          backgroundColor: c.estadoComercial === 'ACTIVO' ? '#064e3b' : c.estadoComercial === 'EN_RIESGO' ? '#713f12' : '#881337',
-                          color: c.estadoComercial === 'ACTIVO' ? '#6ee7b7' : c.estadoComercial === 'EN_RIESGO' ? '#fde047' : '#fda4af'
-                        }}>
-                          {c.estadoComercial === 'ACTIVO' ? '🟢 ACTIVO' : c.estadoComercial === 'EN_RIESGO' ? '🟡 EN RIESGO' : '🔴 REACTIVAR'}
-                        </span>
-                      </td>
-
-                      <td style={{ padding: '10px', textAlign: 'center' }}>
-                        <button
-                          onClick={() => enviarWhatsAppReactivacion(c)}
-                          style={{ padding: '6px 12px', backgroundColor: '#25d366', color: '#ffffff', border: 'none', borderRadius: '6px', fontWeight: '900', fontSize: '10px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                        >
-                          💬 Reactivar WhatsApp
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                  {itemsPacking.map((item, idx) => {
+                    const completado = item.empacadas === item.requeridas;
+                    return (
+                      <tr key={idx} style={{ borderBottom: '1px solid #1e293b', backgroundColor: completado ? 'rgba(16, 185, 129, 0.05)' : 'transparent' }}>
+                        <td style={{ padding: '10px', fontFamily: 'monospace', fontWeight: 'bold', color: '#fbbf24' }}>{item.skuBarcode}</td>
+                        <td style={{ padding: '10px', fontWeight: '900', color: '#ffffff' }}>{item.referencia}</td>
+                        <td style={{ padding: '10px', fontWeight: 'bold' }}>{item.descripcion}</td>
+                        <td style={{ padding: '10px', textAlign: 'center', fontWeight: '900', color: '#38bdf8' }}>{item.talla}</td>
+                        <td style={{ padding: '10px', textAlign: 'center', fontWeight: 'bold' }}>{item.color}</td>
+                        <td style={{ padding: '10px', textAlign: 'center', fontWeight: '900' }}>{item.requeridas}</td>
+                        <td style={{ padding: '10px', textAlign: 'center', fontWeight: '900', color: completado ? '#10b981' : '#fbbf24', fontSize: '12px' }}>{item.empacadas}</td>
+                        <td style={{ padding: '10px', textAlign: 'center' }}>
+                          <span style={{
+                            fontSize: '9px',
+                            fontWeight: '900',
+                            padding: '3px 8px',
+                            borderRadius: '6px',
+                            backgroundColor: completado ? '#064e3b' : '#713f12',
+                            color: completado ? '#6ee7b7' : '#fde047'
+                          }}>
+                            {completado ? '✓ LISTO' : '⏳ PENDIENTE'}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
+
           </div>
         )}
 
@@ -454,7 +436,7 @@ export default function Home() {
                   <input value={celular} onChange={e => setCelular(e.target.value)} style={{ flex: 1, border: 'none', fontWeight: '900', color: '#dc2626', outline: 'none', fontSize: '9.5px' }} />
                 </div>
                 <div style={{ borderBottom: '2px solid #000000', padding: '4px 6px', display: 'flex', alignItems: 'center', gap: '2px' }}>
-                  <span style={{ width: '85px', color: '#000000', fontWeight: '900' }}>MAP UBICACIÓN</span>
+                  <span style={{ width: '85px', color: '#000000', fontWeight: '900' }}>🗺️ UBICACIÓN</span>
                   <select value={deptoSeleccionado} onChange={e => { setDeptoSeleccionado(e.target.value); setCiudadSeleccionada(geoColombia[e.target.value][0]); }} style={{ border: 'none', fontWeight: '900', color: '#dc2626', fontSize: '9px', outline: 'none' }}>
                     {Object.keys(geoColombia).map(d => <option key={d} value={d}>{d}</option>)}
                   </select>
