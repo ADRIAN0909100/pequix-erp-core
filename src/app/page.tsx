@@ -84,15 +84,16 @@ export default function Home() {
   const [mostrarTotalGeneral, setMostrarTotalGeneral] = useState(true);
   const [mensaje, setMensaje] = useState('');
   
-  // Estado para Modales Flotantes
+  // Modales y Cámara Real
   const [modalFoto, setModalFoto] = useState<FilaItemPedido | null>(null);
   const [camaraActiva, setCamaraActiva] = useState(false);
 
-  // Estado del Escáner de Códigos de Barras
+  // Escáner Físico / Manual
   const [codigoIngresado, setCodigoIngresado] = useState('');
   const inputEscanerRef = useRef<HTMLInputElement | null>(null);
+  const html5QrCodeScannerRef = useRef<any>(null);
 
-  // Lista de Ítems a Empacar por Escáner para Pedido PED-0363
+  // Lista de Ítems a Empacar por Escáner
   const [itemsPacking, setItemsPacking] = useState<ItemEscaneoPacking[]>([
     { skuBarcode: '7701234561794', referencia: '6179', descripcion: 'BERMUDA JUNIOR', talla: '4', color: 'AZUL', requeridas: 2, empacadas: 1, curva: 'JUNIOR', imagenUrl: 'https://images.unsplash.com/photo-1519238263530-99bdd11df2ea?w=600&q=80' },
     { skuBarcode: '7701234561796', referencia: '6179', descripcion: 'BERMUDA JUNIOR', talla: '6', color: 'AZUL', requeridas: 2, empacadas: 0, curva: 'JUNIOR', imagenUrl: 'https://images.unsplash.com/photo-1519238263530-99bdd11df2ea?w=600&q=80' },
@@ -137,6 +138,58 @@ export default function Home() {
     }
   }, [moduloActivo]);
 
+  // INICIALIZACIÓN DE CÁMARA REAL USANDO HTML5-QRCODE
+  useEffect(() => {
+    let html5QrCode: any = null;
+
+    if (camaraActiva && moduloActivo === 'ESCANER_BODEGA') {
+      const cargarYArrancarCamara = async () => {
+        try {
+          // Carga dinámica del script oficial de html5-qrcode
+          if (!window.hasOwnProperty('Html5Qrcode')) {
+            await new Promise((resolve) => {
+              const script = document.createElement('script');
+              script.src = 'https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js';
+              script.onload = resolve;
+              document.body.appendChild(script);
+            });
+          }
+
+          const Html5Qrcode = (window as any).Html5Qrcode;
+          html5QrCode = new Html5Qrcode("reader-camara-real");
+          html5QrCodeScannerRef.current = html5QrCode;
+
+          // Inicia la cámara real solicitando permisos al navegador
+          await html5QrCode.start(
+            { facingMode: "environment" }, // Preferencia de cámara trasera en celular
+            {
+              fps: 15,
+              qrbox: { width: 260, height: 180 }
+            },
+            (decodedText: string) => {
+              // Callback al detectar un código de barras o QR de verdad
+              procesarEscaneo(decodedText);
+            },
+            () => {} // Ignorar fotogramas sin código
+          );
+        } catch (err) {
+          setMensaje('⚠️ Error accediendo a la cámara real. Verifica los permisos del navegador.');
+          setCamaraActiva(false);
+        }
+      };
+
+      cargarYArrancarCamara();
+    }
+
+    return () => {
+      if (html5QrCodeScannerRef.current) {
+        try {
+          html5QrCodeScannerRef.current.stop().catch(() => {});
+        } catch (e) {}
+      }
+    };
+  }, [camaraActiva, moduloActivo]);
+
   // Procesar Lectura de Código (1D, 2D, QR o REF)
   const procesarEscaneo = async (codigo: string) => {
     if (!codigo.trim()) return;
@@ -156,13 +209,13 @@ export default function Home() {
           tenant_id: 'EMP-0001',
           usuario_id: 'USR-0001',
           usuario_nombre: 'Adrián Peña',
-          accion: 'ESCANEO_PRENDA_CAMARA_1D_2D',
+          accion: 'ESCANEO_PRENDA_CAMARA_REAL',
           entidad_afectada: 'PACKING_PEDIDO',
           entidad_id: 'PED-0363',
           valor_nuevo: { sku: itemEncontrado.skuBarcode, ref: itemEncontrado.referencia, talla: itemEncontrado.talla, empacada: nuevosItems[index].empacadas }
         }]);
 
-        setMensaje(`🟢 ¡ESCANEO CORRECTO! Ref: ${itemEncontrado.referencia} - Talla ${itemEncontrado.talla} (${nuevosItems[index].empacadas}/${itemEncontrado.requeridas})`);
+        setMensaje(`🟢 ¡ESCANEO REAL CORRECTO! Ref: ${itemEncontrado.referencia} - Talla ${itemEncontrado.talla} (${nuevosItems[index].empacadas}/${itemEncontrado.requeridas})`);
       } else {
         setMensaje(`⚠️ ALERTA: La cantidad requerida para la Ref ${itemEncontrado.referencia} Talla ${itemEncontrado.talla} ya fue completada.`);
       }
@@ -248,7 +301,7 @@ export default function Home() {
             <span style={{ backgroundColor: '#10b981', color: '#022c22', fontWeight: '900', fontSize: '10px', padding: '3px 8px', borderRadius: '4px', textTransform: 'uppercase' }}>
               🟢 PEQUIX ERP CORE SAAS · EMP-0001 (FJ KIDS S.A.S)
             </span>
-            <h1 style={{ fontSize: '1.2rem', fontWeight: '900', margin: '4px 0 0 0', color: '#ffffff' }}>Plataforma B2B & Escáner Cámara 1D/2D</h1>
+            <h1 style={{ fontSize: '1.2rem', fontWeight: '900', margin: '4px 0 0 0', color: '#ffffff' }}>Plataforma B2B & Escáner Cámara Real</h1>
           </div>
 
           <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
@@ -279,7 +332,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* MÓDULO: ESCÁNER DE BODEGA CON SOPORTE DE CÁMARA EN VIVO */}
+        {/* MÓDULO: ESCÁNER DE BODEGA CON CÁMARA REAL */}
         {moduloActivo === 'ESCANER_BODEGA' && (
           <div style={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', padding: '20px', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -287,40 +340,31 @@ export default function Home() {
                 <span style={{ backgroundColor: '#fbbf24', color: '#451a03', fontWeight: '900', fontSize: '10px', padding: '3px 8px', borderRadius: '4px' }}>
                   ORDEN DE DESPACHO: PED-0363 · MANUELA MENDEZ ZAPATA
                 </span>
-                <h2 style={{ fontSize: '1.2rem', fontWeight: '900', color: '#38bdf8', margin: '6px 0 0 0' }}>🔦 Escáner Cámara 1D / 2D / QR & Checklist de Empaque</h2>
+                <h2 style={{ fontSize: '1.2rem', fontWeight: '900', color: '#38bdf8', margin: '6px 0 0 0' }}>🔦 Escáner Cámara Real (1D / 2D / QR) & Empaque</h2>
               </div>
 
-              {/* Botón para Activar Escáner con Cámara del Dispositivo */}
+              {/* Botón Encendido/Apagado Cámara Real */}
               <button
                 onClick={() => setCamaraActiva(!camaraActiva)}
                 style={{ padding: '10px 18px', backgroundColor: camaraActiva ? '#f43f5e' : '#a855f7', color: '#ffffff', border: 'none', borderRadius: '10px', fontWeight: '900', cursor: 'pointer', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}
               >
-                📷 {camaraActiva ? 'Cerrar Cámara Escáner' : 'Activar Cámara Celular / PC'}
+                📷 {camaraActiva ? 'Cerrar Cámara Lente' : 'Abrir Cámara Real Celular / PC'}
               </button>
             </div>
 
-            {/* VISOR DE CÁMARA EN VIVO SI SE ACTIVA EL ESCÁNER VISUAL */}
+            {/* CONTENEDOR DE LA CÁMARA REAL NATIVA (HTML5-QRCODE) */}
             {camaraActiva && (
               <div style={{ backgroundColor: '#1e293b', border: '2px solid #a855f7', padding: '20px', borderRadius: '14px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
                 <span style={{ fontSize: '11px', color: '#cbd5e1', fontWeight: 'bold' }}>
-                  🎥 Enfoca el código de barras (EAN-13, Code 128) o código QR frente a la cámara:
+                  🎥 Lente en vivo activo. Apunta la cámara del dispositivo hacia el código de barras o QR:
                 </span>
-                <div style={{ width: '100%', maxWidth: '380px', height: '220px', backgroundColor: '#000000', borderRadius: '12px', border: '2px dashed #a855f7', display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'relative', overflow: 'hidden' }}>
-                  <div style={{ position: 'absolute', width: '80%', height: '2px', backgroundColor: '#f43f5e', boxShadow: '0 0 10px #f43f5e' }} />
-                  <span style={{ color: '#94a3b8', fontSize: '12px', fontWeight: 'bold' }}>[Lente activo escaneando 1D/2D/QR...]</span>
-                </div>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <button onClick={() => procesarEscaneo('7701234561794')} style={{ padding: '6px 12px', backgroundColor: '#38bdf8', color: '#0f172a', border: 'none', borderRadius: '6px', fontSize: '10px', fontWeight: '900', cursor: 'pointer' }}>
-                    ⚡ Simular Escaneo Cámara (Ref 6179 T4)
-                  </button>
-                  <button onClick={() => procesarEscaneo('7701234561804')} style={{ padding: '6px 12px', backgroundColor: '#38bdf8', color: '#0f172a', border: 'none', borderRadius: '6px', fontSize: '10px', fontWeight: '900', cursor: 'pointer' }}>
-                    ⚡ Simular Escaneo Cámara (Ref 6180 T4)
-                  </button>
-                </div>
+                
+                {/* DIV DONDE SE RENDERIZA EL VIDEO REAL DE LA CÁMARA */}
+                <div id="reader-camara-real" style={{ width: '100%', maxWidth: '450px', borderRadius: '12px', overflow: 'hidden', border: '2px solid #38bdf8' }} />
               </div>
             )}
 
-            {/* Input de Lectura por Pistola Físicas o Entrada Manual */}
+            {/* Input Manual o Pistola USB/Bluetooth */}
             <div style={{ backgroundColor: '#1e293b', padding: '15px', borderRadius: '12px', border: '1px solid #334155', display: 'flex', gap: '10px', alignItems: 'center' }}>
               <span style={{ fontSize: '20px' }}>🔦</span>
               <input
@@ -364,7 +408,7 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Tabla Lista de Chequeo de Empaque */}
+            {/* Tabla Lista de Chequeo */}
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px', textAlign: 'left' }}>
                 <thead>
