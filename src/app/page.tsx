@@ -42,7 +42,7 @@ const supabase = {
   })
 };
 
-// Base Geográfica Colombia & Internacional
+// Base Geográfica Colombia & Internacional (Mayúsculas)
 const geoColombia: { [key: string]: string[] } = {
   'ANTIOQUIA': ['ITAGÜÍ', 'MEDELLÍN', 'BELLO', 'ENVIGADO', 'SABANETA', 'RIONEGRO'],
   'CÓRDOBA': ['MONTERÍA', 'CERETÉ', 'SAHAGÚN', 'LORICA', 'PLANETA RICA'],
@@ -57,8 +57,7 @@ const geoColombia: { [key: string]: string[] } = {
 interface ConfigPreciosTenant {
   deltaL2: number;
   margenL3Porcentaje: number;
-  deltaL4: number;
-  deltaL5: number;
+  deltaL4MED: number;
 }
 
 interface FilaItemPedido {
@@ -67,7 +66,7 @@ interface FilaItemPedido {
   descripcion: string;
   curva: 'MESES' | 'BEBÉS' | 'JUNIOR' | 'JUVENIL';
   tallasMap: { [key: string]: number };
-  preciosPorLista: { L1: number; L2: number; L3: number; L4: number; L5: number };
+  preciosPorLista: { L1: number; L2: number; L3: number; L4MED: number };
   overrideActivo?: boolean;
   colores: { nombre: string; bg: string; text: string }[];
   imagenUrl: string;
@@ -75,7 +74,7 @@ interface FilaItemPedido {
 
 export default function Home() {
   const [pestana, setPestana] = useState<'NUEVO_PEDIDO' | 'CONFIG_PRECIOS' | 'DASHBOARD'>('NUEVO_PEDIDO');
-  const [listaActiva, setListaActiva] = useState<'L1' | 'L2' | 'L3' | 'L4' | 'L5'>('L1');
+  const [listaActiva, setListaActiva] = useState<'L1' | 'L2' | 'L3' | 'L4MED'>('L1');
   const [mostrarTotalGeneral, setMostrarTotalGeneral] = useState(true);
   const [mensaje, setMensaje] = useState('');
   
@@ -86,11 +85,10 @@ export default function Home() {
   const [configPrecios, setConfigPrecios] = useState<ConfigPreciosTenant>({
     deltaL2: 1000,
     margenL3Porcentaje: 70,
-    deltaL4: -2000,
-    deltaL5: -1000
+    deltaL4MED: -2000
   });
 
-  // Datos Encabezado Pedido
+  // Datos Encabezado Pedido (MAYÚSCULAS)
   const [clienteNombre, setClienteNombre] = useState('MANUELA MENDEZ ZAPATA');
   const [nitCliente, setNitCliente] = useState('1000207034-1');
   const [almacen, setAlmacen] = useState('SWEET BOYS');
@@ -114,18 +112,18 @@ export default function Home() {
 
   // Filas del Pedido B2B
   const [filas, setFilas] = useState<FilaItemPedido[]>([
-    { num: 1, referencia: '6179', descripcion: 'BERMUDA JUNIOR', curva: 'JUNIOR', tallasMap: { '4': 2, '6': 2, '8': 3, '10': 3, '12': 3, '14': 3 }, preciosPorLista: { L1: 56900, L2: 57900, L3: 96900, L4: 54900, L5: 55900 }, colores: [{ nombre: 'AZUL', bg: '#2563eb', text: '#ffffff' }], imagenUrl: 'https://images.unsplash.com/photo-1519238263530-99bdd11df2ea?w=600&q=80' },
-    { num: 2, referencia: '6180', descripcion: 'BERMUDA JUNIOR', curva: 'JUNIOR', tallasMap: { '4': 2, '6': 2, '8': 3, '10': 4, '12': 4, '14': 4 }, preciosPorLista: { L1: 56900, L2: 57900, L3: 96900, L4: 54900, L5: 55900 }, colores: [{ nombre: 'AZUL', bg: '#2563eb', text: '#ffffff' }], imagenUrl: 'https://images.unsplash.com/photo-1622290291468-a28f7a7dc6a8?w=600&q=80' },
-    { num: 3, referencia: '6181', descripcion: 'BERMUDA JUNIOR', curva: 'JUNIOR', tallasMap: { '4': 2, '6': 2, '8': 3, '10': 4, '12': 4, '14': 4 }, preciosPorLista: { L1: 56900, L2: 57900, L3: 96900, L4: 54900, L5: 55900 }, colores: [{ nombre: 'AZUL', bg: '#2563eb', text: '#ffffff' }], imagenUrl: 'https://images.unsplash.com/photo-1503919545889-aef636e10ad4?w=600&q=80' },
-    { num: 4, referencia: '6182', descripcion: 'BERMUDA JUNIOR', curva: 'JUNIOR', tallasMap: { '4': 2, '6': 2, '8': 6, '10': 6, '12': 6, '14': 6 }, preciosPorLista: { L1: 56900, L2: 57900, L3: 96900, L4: 54900, L5: 55900 }, colores: [{ nombre: 'AZUL', bg: '#2563eb', text: '#ffffff' }], imagenUrl: 'https://images.unsplash.com/photo-1519238263530-99bdd11df2ea?w=600&q=80' },
-    { num: 5, referencia: '6183', descripcion: 'BERMUDA JUNIOR', curva: 'JUNIOR', tallasMap: { '4': 2, '6': 2, '8': 4, '10': 6, '12': 6, '14': 6 }, preciosPorLista: { L1: 53900, L2: 54900, L3: 91900, L4: 51900, L5: 52900 }, colores: [{ nombre: 'NEGRO', bg: '#000000', text: '#ffffff' }], imagenUrl: 'https://images.unsplash.com/photo-1622290291468-a28f7a7dc6a8?w=600&q=80' },
-    { num: 6, referencia: '6183', descripcion: 'BERMUDA JUNIOR', curva: 'JUNIOR', tallasMap: { '4': 1, '6': 1, '8': 2, '10': 3, '12': 3, '14': 3 }, preciosPorLista: { L1: 53900, L2: 54900, L3: 91900, L4: 51900, L5: 52900 }, colores: [{ nombre: 'ARENA', bg: '#a3a3a3', text: '#000000' }], imagenUrl: 'https://images.unsplash.com/photo-1503919545889-aef636e10ad4?w=600&q=80' },
-    { num: 7, referencia: '6184', descripcion: 'BERMUDA JUNIOR', curva: 'JUNIOR', tallasMap: { '4': 1, '6': 1, '8': 2, '10': 3, '12': 3, '14': 3 }, preciosPorLista: { L1: 51900, L2: 52900, L3: 88900, L4: 49900, L5: 50900 }, colores: [{ nombre: 'CAQUI', bg: '#d4b106', text: '#000000' }], imagenUrl: 'https://images.unsplash.com/photo-1519238263530-99bdd11df2ea?w=600&q=80' },
-    { num: 8, referencia: '6184', descripcion: 'BERMUDA JUNIOR', curva: 'JUNIOR', tallasMap: { '4': 2, '6': 2, '8': 4, '10': 6, '12': 6, '14': 6 }, preciosPorLista: { L1: 51900, L2: 52900, L3: 88900, L4: 49900, L5: 50900 }, colores: [{ nombre: 'NEGRO', bg: '#000000', text: '#ffffff' }], imagenUrl: 'https://images.unsplash.com/photo-1622290291468-a28f7a7dc6a8?w=600&q=80' },
-    { num: 9, referencia: '6185', descripcion: 'BERMUDA JUNIOR', curva: 'JUNIOR', tallasMap: { '4': 2, '6': 2, '8': 6, '10': 6, '12': 6, '14': 6 }, preciosPorLista: { L1: 56900, L2: 57900, L3: 96900, L4: 54900, L5: 55900 }, colores: [{ nombre: 'AZUL', bg: '#2563eb', text: '#ffffff' }], imagenUrl: 'https://images.unsplash.com/photo-1503919545889-aef636e10ad4?w=600&q=80' }
+    { num: 1, referencia: '6179', descripcion: 'BERMUDA JUNIOR', curva: 'JUNIOR', tallasMap: { '4': 2, '6': 2, '8': 3, '10': 3, '12': 3, '14': 3 }, preciosPorLista: { L1: 56900, L2: 57900, L3: 96900, L4MED: 54900 }, colores: [{ nombre: 'AZUL', bg: '#2563eb', text: '#ffffff' }], imagenUrl: 'https://images.unsplash.com/photo-1519238263530-99bdd11df2ea?w=600&q=80' },
+    { num: 2, referencia: '6180', descripcion: 'BERMUDA JUNIOR', curva: 'JUNIOR', tallasMap: { '4': 2, '6': 2, '8': 3, '10': 4, '12': 4, '14': 4 }, preciosPorLista: { L1: 56900, L2: 57900, L3: 96900, L4MED: 54900 }, colores: [{ nombre: 'AZUL', bg: '#2563eb', text: '#ffffff' }], imagenUrl: 'https://images.unsplash.com/photo-1622290291468-a28f7a7dc6a8?w=600&q=80' },
+    { num: 3, referencia: '6181', descripcion: 'BERMUDA JUNIOR', curva: 'JUNIOR', tallasMap: { '4': 2, '6': 2, '8': 3, '10': 4, '12': 4, '14': 4 }, preciosPorLista: { L1: 56900, L2: 57900, L3: 96900, L4MED: 54900 }, colores: [{ nombre: 'AZUL', bg: '#2563eb', text: '#ffffff' }], imagenUrl: 'https://images.unsplash.com/photo-1503919545889-aef636e10ad4?w=600&q=80' },
+    { num: 4, referencia: '6182', descripcion: 'BERMUDA JUNIOR', curva: 'JUNIOR', tallasMap: { '4': 2, '6': 2, '8': 6, '10': 6, '12': 6, '14': 6 }, preciosPorLista: { L1: 56900, L2: 57900, L3: 96900, L4MED: 54900 }, colores: [{ nombre: 'AZUL', bg: '#2563eb', text: '#ffffff' }], imagenUrl: 'https://images.unsplash.com/photo-1519238263530-99bdd11df2ea?w=600&q=80' },
+    { num: 5, referencia: '6183', descripcion: 'BERMUDA JUNIOR', curva: 'JUNIOR', tallasMap: { '4': 2, '6': 2, '8': 4, '10': 6, '12': 6, '14': 6 }, preciosPorLista: { L1: 53900, L2: 54900, L3: 91900, L4MED: 51900 }, colores: [{ nombre: 'NEGRO', bg: '#000000', text: '#ffffff' }], imagenUrl: 'https://images.unsplash.com/photo-1622290291468-a28f7a7dc6a8?w=600&q=80' },
+    { num: 6, referencia: '6183', descripcion: 'BERMUDA JUNIOR', curva: 'JUNIOR', tallasMap: { '4': 1, '6': 1, '8': 2, '10': 3, '12': 3, '14': 3 }, preciosPorLista: { L1: 53900, L2: 54900, L3: 91900, L4MED: 51900 }, colores: [{ nombre: 'ARENA', bg: '#a3a3a3', text: '#000000' }], imagenUrl: 'https://images.unsplash.com/photo-1503919545889-aef636e10ad4?w=600&q=80' },
+    { num: 7, referencia: '6184', descripcion: 'BERMUDA JUNIOR', curva: 'JUNIOR', tallasMap: { '4': 1, '6': 1, '8': 2, '10': 3, '12': 3, '14': 3 }, preciosPorLista: { L1: 51900, L2: 52900, L3: 88900, L4MED: 49900 }, colores: [{ nombre: 'CAQUI', bg: '#d4b106', text: '#000000' }], imagenUrl: 'https://images.unsplash.com/photo-1519238263530-99bdd11df2ea?w=600&q=80' },
+    { num: 8, referencia: '6184', descripcion: 'BERMUDA JUNIOR', curva: 'JUNIOR', tallasMap: { '4': 2, '6': 2, '8': 4, '10': 6, '12': 6, '14': 6 }, preciosPorLista: { L1: 51900, L2: 52900, L3: 88900, L4MED: 49900 }, colores: [{ nombre: 'NEGRO', bg: '#000000', text: '#ffffff' }], imagenUrl: 'https://images.unsplash.com/photo-1622290291468-a28f7a7dc6a8?w=600&q=80' },
+    { num: 9, referencia: '6185', descripcion: 'BERMUDA JUNIOR', curva: 'JUNIOR', tallasMap: { '4': 2, '6': 2, '8': 6, '10': 6, '12': 6, '14': 6 }, preciosPorLista: { L1: 56900, L2: 57900, L3: 96900, L4MED: 54900 }, colores: [{ nombre: 'AZUL', bg: '#2563eb', text: '#ffffff' }], imagenUrl: 'https://images.unsplash.com/photo-1503919545889-aef636e10ad4?w=600&q=80' }
   ]);
 
-  // Categorías Master
+  // Lista Master de Categorías
   const categoriasMaster = [
     'BERMUDA JUNIOR', 'BERMUDA BEBE', 'CONJUNTO BEBE DORMILON', 'CONJUNTO BEBE PREMIUM',
     'CONJUNTO JUNIOR BASICO T16', 'CONJUNTO JUNIOR PREMIUM T16', 'JEAN JUNIOR', 'CAMISETA JUNIOR CR',
@@ -137,20 +135,19 @@ export default function Home() {
 
   const inputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
 
-  // Recalcular Precios Automáticamente con base en Parámetros
+  // Recalcular Precios con L1, L2, L3 y L4MED
   const aplicarParametrosPrecios = async () => {
     setFilas(prev =>
       prev.map(f => {
-        if (f.overrideActivo) return f; // Mantiene el override manual
+        if (f.overrideActivo) return f;
         const l1 = f.preciosPorLista.L1;
         const l2 = l1 + configPrecios.deltaL2;
         const l3 = Math.round((l1 * (1 + configPrecios.margenL3Porcentaje / 100)) / 100) * 100 - 100;
-        const l4 = l1 + configPrecios.deltaL4;
-        const l5 = l1 + configPrecios.deltaL5;
+        const l4MED = l1 + configPrecios.deltaL4MED;
 
         return {
           ...f,
-          preciosPorLista: { L1: l1, L2: l2, L3: l3, L4: l4, L5: l5 }
+          preciosPorLista: { L1: l1, L2: l2, L3: l3, L4MED: l4MED }
         };
       })
     );
@@ -166,11 +163,11 @@ export default function Home() {
       valor_nuevo: configPrecios
     }]);
 
-    setMensaje('⚙️ Parámetros de precios actualizados y aplicados a todas las listas.');
+    setMensaje('⚙️ Parámetros de precios actualizados (L1, L2, L3 y L4 MED).');
   };
 
   // Override Manual por Referencia y Lista
-  const cambiarPrecioOverride = async (idx: number, lista: 'L1' | 'L2' | 'L3' | 'L4' | 'L5', nuevoValor: number) => {
+  const cambiarPrecioOverride = async (idx: number, lista: 'L1' | 'L2' | 'L3' | 'L4MED', nuevoValor: number) => {
     setFilas(prev =>
       prev.map((f, i) => {
         if (i === idx) {
@@ -283,14 +280,14 @@ export default function Home() {
               📊 Dashboard
             </button>
 
-            {/* SELECTOR INTERACTIVO DE LISTAS DE PRECIO */}
+            {/* SELECTOR INTERACTIVO DE LISTAS DE PRECIO (L1, L2, L3, L4 MED) */}
             <div style={{ display: 'flex', gap: '4px', backgroundColor: '#1e293b', padding: '4px', borderRadius: '8px', border: '1px solid #334155' }}>
-              {(['L1', 'L2', 'L3', 'L4', 'L5'] as const).map(l => (
+              {(['L1', 'L2', 'L3', 'L4MED'] as const).map(l => (
                 <button
                   key={l}
                   onClick={() => setListaActiva(l)}
                   style={{
-                    padding: '4px 8px',
+                    padding: '4px 10px',
                     borderRadius: '6px',
                     border: 'none',
                     fontWeight: '900',
@@ -300,10 +297,15 @@ export default function Home() {
                     color: listaActiva === l ? '#0f172a' : '#cbd5e1'
                   }}
                 >
-                  {l}
+                  {l === 'L4MED' ? 'L4 MED' : l} {l === 'L1' ? '(MAYORISTA)' : l === 'L3' ? '(DETAL)' : ''}
                 </button>
               ))}
             </div>
+
+            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: 'bold', color: '#fbbf24', cursor: 'pointer', backgroundColor: '#1e293b', padding: '6px 12px', borderRadius: '6px', border: '1px solid #334155' }}>
+              <input type="checkbox" checked={mostrarTotalGeneral} onChange={e => setMostrarTotalGeneral(e.target.checked)} />
+              💵 Mostrar Valor Total General ($ COP)
+            </label>
 
             <button onClick={guardarYExportarPDF} style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', backgroundColor: '#10b981', color: '#022c22', fontWeight: '900', fontSize: '11px', cursor: 'pointer' }}>
               🖨️ PDF
@@ -317,15 +319,14 @@ export default function Home() {
           </div>
         )}
 
-        {/* PESTAÑA: PARAMETRIZACIÓN DE PRECIOS & OVERRIDES */}
+        {/* PESTAÑA: PARAMETRIZACIÓN DE PRECIOS & OVERRIDES (SISTEMA L1-L4MED) */}
         {pestana === 'CONFIG_PRECIOS' && (
           <div style={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', padding: '20px', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
             <div>
               <h2 style={{ fontSize: '1.2rem', fontWeight: '900', color: '#38bdf8', margin: 0 }}>⚙️ Parámetros Globales de Listas de Precios (`EMP-0001`)</h2>
-              <p style={{ fontSize: '12px', color: '#94a3b8', margin: '4px 0 0 0' }}>Ajusta los deltas y márgenes para recalcular automáticamente las tarifas del sistema.</p>
+              <p style={{ fontSize: '12px', color: '#94a3b8', margin: '4px 0 0 0' }}>Estructura oficial: L1 (Mayorista Base), L2 (Distribuidor), L3 (Detal/Website) y L4 MED (Local Medellín).</p>
             </div>
 
-            {/* Formulario Parámetros */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '15px' }}>
               <div style={{ backgroundColor: '#1e293b', padding: '15px', borderRadius: '12px', border: '1px solid #334155' }}>
                 <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', color: '#fbbf24', marginBottom: '6px' }}>Delta Lista L2 ($ COP):</label>
@@ -350,14 +351,14 @@ export default function Home() {
               </div>
 
               <div style={{ backgroundColor: '#1e293b', padding: '15px', borderRadius: '12px', border: '1px solid #334155' }}>
-                <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', color: '#fbbf24', marginBottom: '6px' }}>Delta Lista L4 Local ($ COP):</label>
+                <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', color: '#fbbf24', marginBottom: '6px' }}>Delta Lista L4 MED ($ COP):</label>
                 <input
                   type="number"
-                  value={configPrecios.deltaL4}
-                  onChange={e => setConfigPrecios({ ...configPrecios, deltaL4: parseInt(e.target.value) || 0 })}
+                  value={configPrecios.deltaL4MED}
+                  onChange={e => setConfigPrecios({ ...configPrecios, deltaL4MED: parseInt(e.target.value) || 0 })}
                   style={{ width: '100%', padding: '8px', backgroundColor: '#0f172a', border: '1px solid #334155', color: '#fff', borderRadius: '6px', fontWeight: 'bold' }}
                 />
-                <span style={{ fontSize: '10px', color: '#94a3b8', display: 'block', marginTop: '4px' }}>L4 = L1 + Delta (Ej: -$2.000 COP)</span>
+                <span style={{ fontSize: '10px', color: '#94a3b8', display: 'block', marginTop: '4px' }}>L4 MED = L1 + Delta (Ej: -$2.000 COP)</span>
               </div>
             </div>
 
@@ -376,7 +377,7 @@ export default function Home() {
                     <th style={{ padding: '8px' }}>PRECIO L1 (BASE)</th>
                     <th style={{ padding: '8px' }}>L2 (DISTRIBUIDOR)</th>
                     <th style={{ padding: '8px' }}>L3 (DETAL)</th>
-                    <th style={{ padding: '8px' }}>L4 (LOCAL)</th>
+                    <th style={{ padding: '8px' }}>L4 MED (LOCAL)</th>
                     <th style={{ padding: '8px' }}>ESTADO OVERRIDE</th>
                   </tr>
                 </thead>
@@ -395,7 +396,7 @@ export default function Home() {
                       </td>
                       <td style={{ padding: '8px' }}>$ {f.preciosPorLista.L2.toLocaleString('es-CO')}</td>
                       <td style={{ padding: '8px' }}>$ {f.preciosPorLista.L3.toLocaleString('es-CO')}</td>
-                      <td style={{ padding: '8px' }}>$ {f.preciosPorLista.L4.toLocaleString('es-CO')}</td>
+                      <td style={{ padding: '8px' }}>$ {f.preciosPorLista.L4MED.toLocaleString('es-CO')}</td>
                       <td style={{ padding: '8px' }}>
                         {f.overrideActivo ? (
                           <span style={{ backgroundColor: '#713f12', color: '#fde047', fontSize: '9px', fontWeight: '900', padding: '2px 6px', borderRadius: '4px' }}>✏️ MANUAL OVERRIDE</span>
@@ -520,7 +521,7 @@ export default function Home() {
               />
             </div>
 
-            {/* 3. MATRIZ DE TALLAS CON CÁMARA 📷 ABAJO DEL NÚMERO CONSECUTIVO */}
+            {/* 3. MATRIZ CON BOTÓN CÁMARA 📷 DEBAJO EN EL MISMO RECUADRO DE N° */}
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '9.5px', textAlign: 'center', border: '2px solid #000000' }}>
                 <thead>
@@ -575,7 +576,7 @@ export default function Home() {
                     <th style={{ borderRight: '1px solid #000000', padding: '2px' }}>12</th>
                     <th style={{ borderRight: '1px solid #000000', padding: '2px' }}>14</th>
                     <th style={{ padding: '2px' }}>16</th>
-                </tr>
+                  </tr>
 
                   {/* TALLAS JUVENIL */}
                   <tr style={{ backgroundColor: '#f8fafc', borderBottom: '2px solid #000000', fontSize: '8px', fontWeight: '900' }}>
@@ -600,7 +601,7 @@ export default function Home() {
                     return (
                       <tr key={idx} style={{ borderBottom: '1px solid #000000' }}>
                         
-                        {/* CELDA N° CON EL NÚMERO ARRIBA Y LA CÁMARA 📷 DEBAJO EN EL MISMO RECUADRO */}
+                        {/* CELDA N° CON NÚMERO Y CÁMARA 📷 EMBEBIDA */}
                         <td style={{ padding: '2px', borderRight: '2px solid #000000', verticalAlign: 'middle' }}>
                           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
                             <span style={{ fontWeight: '900', fontSize: '10px' }}>{idx + 1}</span>
@@ -682,7 +683,7 @@ export default function Home() {
               </table>
             </div>
 
-            {/* 4. RESUMEN POR CATEGORÍA Y TOTAL GENERAL */}
+            {/* 4. RESUMEN AGRUPADO POR CATEGORÍA Y TOTAL GENERAL */}
             <div style={{ marginTop: '12px', borderTop: '2px solid #000000', paddingTop: '8px' }}>
               <h4 style={{ fontSize: '9.5px', fontWeight: '900', margin: '0 0 6px 0', textTransform: 'uppercase' }}>
                 📦 Resumen por Categoría · {clienteNombre}
