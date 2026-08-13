@@ -238,7 +238,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* CONTENEDOR TAMAÑO CARTA (CLEAN IMPRESIÓN SIN MARCOS NEGROS EXTERNOS) */}
+        {/* CONTENEDOR TAMAÑO CARTA */}
         <div id="hoja-pedido-oficial" style={{ backgroundColor: '#ffffff', color: '#000000', padding: '10px', borderRadius: '0px', border: 'none', boxSizing: 'border-box', maxWidth: '794px', margin: '0 auto', width: '100%' }}>
           
           {/* 1. ENCABEZADO INSTITUCIONAL */}
@@ -269,7 +269,6 @@ export default function Home() {
           {/* 2. REPARTICIÓN PROPORCIONAL 70% / 30% EXACTA EN DATOS DE CLIENTE */}
           <div style={{ display: 'grid', gridTemplateColumns: '7fr 3fr', border: '2px solid #000000', fontSize: '9.5px', fontWeight: '900', marginBottom: '-2px', boxSizing: 'border-box', overflow: 'hidden' }}>
             
-            {/* BLOQUE IZQUIERDO: 70% ANCHO PARA NOMBRES LARGOS */}
             <div style={{ borderRight: '2px solid #000000', boxSizing: 'border-box' }}>
               <div style={{ borderBottom: '2px solid #000000', padding: '4px 8px', display: 'flex', alignItems: 'center' }}>
                 <span style={{ width: '110px', color: '#000000', fontWeight: '900' }}>👤 SEÑOR(ES)</span>
@@ -299,7 +298,6 @@ export default function Home() {
               </div>
             </div>
 
-            {/* BLOQUE DERECHO: 30% ANCHO PARA TELÉFONOS Y UBICACIÓN */}
             <div style={{ boxSizing: 'border-box' }}>
               <div style={{ borderBottom: '2px solid #000000', padding: '4px 6px', display: 'flex', alignItems: 'center' }}>
                 <span style={{ width: '85px', color: '#000000', fontWeight: '900' }}>🆔 NIT O C.C.</span>
@@ -312,7 +310,6 @@ export default function Home() {
                 <input value={celular} onChange={e => setCelular(e.target.value)} style={{ flex: 1, border: 'none', fontWeight: '900', color: '#dc2626', outline: 'none', fontSize: '9.5px' }} />
               </div>
 
-              {/* Selector de Ubicación en Negrilla Sostenida */}
               <div style={{ borderBottom: '2px solid #000000', padding: '4px 6px', display: 'flex', alignItems: 'center', gap: '2px' }}>
                 <span style={{ width: '85px', color: '#000000', fontWeight: '900' }}>🗺️ UBICACIÓN</span>
                 <select value={deptoSeleccionado} onChange={e => { setDeptoSeleccionado(e.target.value); setCiudadSeleccionada(geoColombia[e.target.value][0]); }} style={{ border: 'none', fontWeight: '900', color: '#dc2626', fontSize: '9px', outline: 'none' }}>
@@ -326,7 +323,7 @@ export default function Home() {
               <div style={{ borderBottom: '2px solid #000000', padding: '4px 6px', display: 'flex', alignItems: 'center', gap: '2px' }}>
                 <span style={{ width: '65px', color: '#000000', fontWeight: '900' }}>🏷️ DESC</span>
                 <input value={descuento} onChange={e => setDescuento(e.target.value)} style={{ width: '30px', border: 'none', fontWeight: '900', color: '#dc2626', outline: 'none' }} />
-                <span style={{ width: '60px', color: '#000000', fontWeight: '900' }}>👤 VEND</span>
+                <span style={{ width: '65px', color: '#000000', fontWeight: '900' }}>👤 VEND</span>
                 <input value={vendedor} onChange={e => setVendedor(e.target.value.toUpperCase())} style={{ flex: 1, border: 'none', fontWeight: '900', color: '#dc2626', outline: 'none', fontSize: '9.5px' }} />
               </div>
 
@@ -348,12 +345,12 @@ export default function Home() {
             />
           </div>
 
-          {/* 3. MATRIZ CON ENCABEZADO VERTICAL Y TALLAS INDEPENDIENTES REAJUSTADAS */}
+          {/* 3. MATRIZ CON BOTÓN CÁMARA 📷 UBICADO ABAJO DEL NÚMERO DE REFERENCIA ($N^\circ$) */}
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '9.5px', textAlign: 'center', border: '2px solid #000000' }}>
               <thead>
                 <tr style={{ backgroundColor: '#f1f5f9', borderBottom: '2px solid #000000', fontWeight: '900' }}>
-                  <th style={{ padding: '3px', borderRight: '2px solid #000000', width: '22px' }} rowSpan={5}>N°</th>
+                  <th style={{ padding: '3px', borderRight: '2px solid #000000', width: '32px' }} rowSpan={5}>N°</th>
                   <th style={{ padding: '3px', borderRight: '2px solid #000000', width: '45px' }} rowSpan={5}>REF</th>
                   <th style={{ padding: '3px', borderRight: '2px solid #000000', width: '125px', textAlign: 'left' }} rowSpan={5}>DESCRIPCIÓN</th>
                   
@@ -427,22 +424,25 @@ export default function Home() {
 
                   return (
                     <tr key={idx} style={{ borderBottom: '1px solid #000000' }}>
-                      <td style={{ padding: '3px', fontWeight: 'bold', borderRight: '2px solid #000000' }}>
-                        {idx + 1}
-                      </td>
-
-                      <td style={{ padding: '3px', fontWeight: '900', borderRight: '2px solid #000000' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2px' }}>
-                          <span>{f.referencia}</span>
+                      
+                      {/* CELDA N° CON EL NÚMERO ARRIBA Y LA CÁMARA 📷 DEBAJO EN EL MISMO RECUADRO */}
+                      <td style={{ padding: '2px', borderRight: '2px solid #000000', verticalAlign: 'middle' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                          <span style={{ fontWeight: '900', fontSize: '10px' }}>{idx + 1}</span>
                           <button
                             onClick={() => setModalFoto(f)}
                             className="no-print"
                             title="Toca para ver la foto flotante de la prenda"
-                            style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '10px', padding: 0 }}
+                            style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '11px', lineHeight: '1', marginTop: '2px', padding: 0 }}
                           >
                             📷
                           </button>
                         </div>
+                      </td>
+
+                      {/* REF LIMPIA Y DESTACADA */}
+                      <td style={{ padding: '3px', fontWeight: '900', borderRight: '2px solid #000000', fontSize: '10px' }}>
+                        {f.referencia}
                       </td>
 
                       <td style={{ padding: '3px', fontWeight: '900', borderRight: '2px solid #000000', textAlign: 'left' }}>
@@ -463,7 +463,7 @@ export default function Home() {
                         </select>
                       </td>
 
-                      {/* CAJONCITOS INDEPENDIENTES CON ENTER EXCEL */}
+                      {/* CAJONCITOS INDEPENDIENTES CON TECLA ENTER EXCEL */}
                       {columnasTallasMaster.map((_, cIdx) => {
                         const tName = tallasLista[cIdx];
                         const inputKey = `${idx}-${cIdx}`;
@@ -496,7 +496,7 @@ export default function Home() {
                         $ {valorTotal.toLocaleString('es-CO')}
                       </td>
                       
-                      {/* NOTA DE COLOR CON RELLENO IMPRESO EXACTO */}
+                      {/* NOTA DE COLOR CON FONDO IMPRESO REAL */}
                       <td style={{ padding: '3px', textAlign: 'center' }}>
                         {f.colores.map((c, cIdx) => (
                           <span key={cIdx} style={{ backgroundColor: c.bg, color: c.text, padding: '2px 5px', borderRadius: '3px', fontSize: '7.5px', fontWeight: '900', display: 'inline-block', border: '1px solid #000000', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
@@ -573,7 +573,7 @@ export default function Home() {
             </div>
           </div>
 
-          {/* 5. PIE DE PÁGINA CON CRÉDITOS SOLAMENTE DE PEQUIX */}
+          {/* 5. PIE DE PÁGINA CON CRÉDITOS DE PEQUIX */}
           <div style={{ borderTop: '2px solid #000000', marginTop: '10px', paddingTop: '6px', textAlign: 'center', fontSize: '8.5px', color: '#000000', fontWeight: 'bold' }}>
             <p style={{ margin: 0 }}>
               🚀 Desarrollado por <strong>Pequix</strong> · Teléfono: <strong>333 254 1133</strong> · Medellín, Colombia
@@ -637,7 +637,7 @@ export default function Home() {
 
       </div>
 
-      {/* ESTILOS EXCLUSIVOS TAMAÑO CARTA SIN BORDES EXTERNOS NEGROS */}
+      {/* ESTILOS DE IMPRESIÓN */}
       <style jsx global>{`
         @media print {
           @page {
