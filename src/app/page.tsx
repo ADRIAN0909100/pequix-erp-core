@@ -62,6 +62,8 @@ interface ItemEscaneoPacking {
   color: string;
   requeridas: number;
   empacadas: number;
+  curva: 'MESES' | 'BEBÉS' | 'JUNIOR' | 'JUVENIL';
+  imagenUrl: string;
 }
 
 interface FilaItemPedido {
@@ -83,6 +85,7 @@ export default function Home() {
   const [mostrarTotalGeneral, setMostrarTotalGeneral] = useState(true);
   const [mensaje, setMensaje] = useState('');
   
+  // Estado para Modal Flotante de Imagen
   const [modalFoto, setModalFoto] = useState<FilaItemPedido | null>(null);
 
   // Estado del Escáner de Códigos de Barras
@@ -91,11 +94,11 @@ export default function Home() {
 
   // Lista de Ítems a Empacar por Escáner para Pedido PED-0363
   const [itemsPacking, setItemsPacking] = useState<ItemEscaneoPacking[]>([
-    { skuBarcode: '7701234561794', referencia: '6179', descripcion: 'BERMUDA JUNIOR', talla: '4', color: 'AZUL', requeridas: 2, empacadas: 0 },
-    { skuBarcode: '7701234561796', referencia: '6179', descripcion: 'BERMUDA JUNIOR', talla: '6', color: 'AZUL', requeridas: 2, empacadas: 0 },
-    { skuBarcode: '7701234561798', referencia: '6179', descripcion: 'BERMUDA JUNIOR', talla: '8', color: 'AZUL', requeridas: 3, empacadas: 0 },
-    { skuBarcode: '7701234561804', referencia: '6180', descripcion: 'BERMUDA JUNIOR', talla: '4', color: 'AZUL', requeridas: 2, empacadas: 0 },
-    { skuBarcode: '7701234561814', referencia: '6181', descripcion: 'BERMUDA JUNIOR', talla: '4', color: 'AZUL', requeridas: 2, empacadas: 0 }
+    { skuBarcode: '7701234561794', referencia: '6179', descripcion: 'BERMUDA JUNIOR', talla: '4', color: 'AZUL', requeridas: 2, empacadas: 1, curva: 'JUNIOR', imagenUrl: 'https://images.unsplash.com/photo-1519238263530-99bdd11df2ea?w=600&q=80' },
+    { skuBarcode: '7701234561796', referencia: '6179', descripcion: 'BERMUDA JUNIOR', talla: '6', color: 'AZUL', requeridas: 2, empacadas: 0, curva: 'JUNIOR', imagenUrl: 'https://images.unsplash.com/photo-1519238263530-99bdd11df2ea?w=600&q=80' },
+    { skuBarcode: '7701234561798', referencia: '6179', descripcion: 'BERMUDA JUNIOR', talla: '8', color: 'AZUL', requeridas: 3, empacadas: 0, curva: 'JUNIOR', imagenUrl: 'https://images.unsplash.com/photo-1519238263530-99bdd11df2ea?w=600&q=80' },
+    { skuBarcode: '7701234561804', referencia: '6180', descripcion: 'BERMUDA JUNIOR', talla: '4', color: 'AZUL', requeridas: 2, empacadas: 0, curva: 'JUNIOR', imagenUrl: 'https://images.unsplash.com/photo-1622290291468-a28f7a7dc6a8?w=600&q=80' },
+    { skuBarcode: '7701234561814', referencia: '6181', descripcion: 'BERMUDA JUNIOR', talla: '4', color: 'AZUL', requeridas: 2, empacadas: 1, curva: 'JUNIOR', imagenUrl: 'https://images.unsplash.com/photo-1503919545889-aef636e10ad4?w=600&q=80' }
   ]);
 
   // Datos Encabezado Pedido
@@ -169,6 +172,20 @@ export default function Home() {
     }
 
     setCodigoIngresado('');
+  };
+
+  // Abrir modal de foto desde el módulo de escáner
+  const abrirFotoDesdeEscaner = (item: ItemEscaneoPacking) => {
+    setModalFoto({
+      num: 1,
+      referencia: item.referencia,
+      descripcion: item.descripcion,
+      curva: item.curva,
+      tallasMap: { [item.talla]: item.requeridas },
+      preciosPorLista: { L1: 56900, L2: 57900, L3: 96900, L4MED: 54900 },
+      colores: [{ nombre: item.color, bg: '#2563eb', text: '#ffffff' }],
+      imagenUrl: item.imagenUrl
+    });
   };
 
   const cambiarTallaValor = (idx: number, keyTalla: string, val: number) => {
@@ -301,7 +318,7 @@ export default function Home() {
             {/* Barra de Progreso de Empaque */}
             <div style={{ backgroundColor: '#1e293b', padding: '15px', borderRadius: '12px', border: '1px solid #334155' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '12px', fontWeight: '900' }}>
-                <span>PROGRESO DE ARMANADO DE CAJA:</span>
+                <span>PROGRESO DE ARMADO DE CAJA:</span>
                 <span style={{ color: totalEmpacadasGeneral() === totalRequeridasGeneral() ? '#10b981' : '#fbbf24' }}>
                   {totalEmpacadasGeneral()} / {totalRequeridasGeneral()} Prendas Empacadas
                 </span>
@@ -318,13 +335,13 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Tabla Lista de Chequeo de Empaque */}
+            {/* Tabla Lista de Chequeo de Empaque con Botón de Cámara 📷 Activo */}
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px', textAlign: 'left' }}>
                 <thead>
                   <tr style={{ backgroundColor: '#1e293b', color: '#94a3b8', borderBottom: '1px solid #334155' }}>
                     <th style={{ padding: '10px' }}>CÓDIGO DE BARRAS / SKU</th>
-                    <th style={{ padding: '10px' }}>REF</th>
+                    <th style={{ padding: '10px' }}>REF / FOTO</th>
                     <th style={{ padding: '10px' }}>DESCRIPCIÓN</th>
                     <th style={{ padding: '10px', textAlign: 'center' }}>TALLA</th>
                     <th style={{ padding: '10px', textAlign: 'center' }}>COLOR</th>
@@ -339,7 +356,21 @@ export default function Home() {
                     return (
                       <tr key={idx} style={{ borderBottom: '1px solid #1e293b', backgroundColor: completado ? 'rgba(16, 185, 129, 0.05)' : 'transparent' }}>
                         <td style={{ padding: '10px', fontFamily: 'monospace', fontWeight: 'bold', color: '#fbbf24' }}>{item.skuBarcode}</td>
-                        <td style={{ padding: '10px', fontWeight: '900', color: '#ffffff' }}>{item.referencia}</td>
+                        
+                        {/* CELDA DE REF CON BOTÓN DE CÁMARA 📷 ACTIVO PARA ABRIR FOTO FLOTANTE */}
+                        <td style={{ padding: '10px', fontWeight: '900', color: '#ffffff' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span>{item.referencia}</span>
+                            <button
+                              onClick={() => abrirFotoDesdeEscaner(item)}
+                              title="Toca para ver la foto flotante de la prenda"
+                              style={{ border: 'none', background: '#334155', color: '#ffffff', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', padding: '2px 6px' }}
+                            >
+                              📷
+                            </button>
+                          </div>
+                        </td>
+
                         <td style={{ padding: '10px', fontWeight: 'bold' }}>{item.descripcion}</td>
                         <td style={{ padding: '10px', textAlign: 'center', fontWeight: '900', color: '#38bdf8' }}>{item.talla}</td>
                         <td style={{ padding: '10px', textAlign: 'center', fontWeight: 'bold' }}>{item.color}</td>
@@ -629,21 +660,53 @@ export default function Home() {
           </div>
         )}
 
-        {/* MODAL FOTO FLOTANTE */}
+        {/* MODAL FOTO FLOTANTE AMPLIO */}
         {modalFoto && (
           <div className="no-print" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, padding: '20px' }}>
-            <div style={{ backgroundColor: '#ffffff', color: '#0f172a', borderRadius: '18px', padding: '20px', maxWidth: '480px', width: '100%', display: 'flex', flexDirection: 'column', gap: '10px', position: 'relative' }}>
-              <button onClick={() => setModalFoto(null)} style={{ position: 'absolute', top: '15px', right: '15px', border: 'none', background: '#cbd5e1', borderRadius: '50%', width: '30px', height: '32px', cursor: 'pointer', fontWeight: 'bold' }}>✕</button>
+            <div style={{ backgroundColor: '#ffffff', color: '#0f172a', borderRadius: '18px', padding: '20px', maxWidth: '480px', width: '100%', display: 'flex', flexDirection: 'column', gap: '10px', position: 'relative', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.5)' }}>
+              
+              <button
+                onClick={() => setModalFoto(null)}
+                style={{ position: 'absolute', top: '15px', right: '15px', border: 'none', background: '#cbd5e1', borderRadius: '50%', width: '30px', height: '32px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px' }}
+              >
+                ✕
+              </button>
+
               <div style={{ textAlign: 'center' }}>
                 <span style={{ backgroundColor: '#1e3a8a', color: '#38bdf8', fontSize: '10px', fontWeight: '900', padding: '3px 8px', borderRadius: '4px' }}>
-                  REF: {modalFoto.referencia} · {modalFoto.curva}
+                  REFERENCIA: {modalFoto.referencia} · {modalFoto.curva}
                 </span>
                 <h3 style={{ fontSize: '1.1rem', fontWeight: '900', margin: '4px 0 0 0' }}>{modalFoto.descripcion}</h3>
               </div>
+
               <div style={{ width: '100%', height: '260px', borderRadius: '12px', overflow: 'hidden', backgroundColor: '#f1f5f9', border: '1px solid #cbd5e1' }}>
                 <img src={modalFoto.imagenUrl} alt={modalFoto.descripcion} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               </div>
-              <button onClick={() => setModalFoto(null)} style={{ width: '100%', padding: '10px', backgroundColor: '#10b981', color: '#022c22', border: 'none', borderRadius: '8px', fontWeight: '900', cursor: 'pointer', fontSize: '11px' }}>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #e2e8f0', paddingTop: '8px' }}>
+                <div>
+                  <span style={{ fontSize: '8.5px', fontWeight: 'bold', color: '#64748b', display: 'block' }}>COLORES EN STOCK:</span>
+                  <div style={{ display: 'flex', gap: '4px', marginTop: '2px' }}>
+                    {modalFoto.colores.map((c, idx) => (
+                      <span key={idx} style={{ backgroundColor: c.bg, color: c.text, padding: '2px 6px', borderRadius: '3px', fontSize: '8px', fontWeight: '900', border: '1px solid #cbd5e1' }}>
+                        {c.nombre}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                <div style={{ textAlign: 'right' }}>
+                  <span style={{ fontSize: '8.5px', fontWeight: 'bold', color: '#64748b' }}>PRECIO {listaActiva}:</span>
+                  <div style={{ fontSize: '1rem', fontWeight: '900', color: '#059669' }}>
+                    $ {modalFoto.preciosPorLista[listaActiva].toLocaleString('es-CO')}
+                  </div>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setModalFoto(null)}
+                style={{ width: '100%', padding: '10px', backgroundColor: '#10b981', color: '#022c22', border: 'none', borderRadius: '8px', fontWeight: '900', cursor: 'pointer', fontSize: '11px' }}
+              >
                 ✏️ Cerrar Ficha
               </button>
             </div>
@@ -652,7 +715,7 @@ export default function Home() {
 
       </div>
 
-      {/* ESTILOS DE IMPRESIÓN */}
+      {/* ESTILOS DE IMPRESIÓN EXCLUSIVOS */}
       <style jsx global>{`
         @media print {
           @page { size: letter portrait; margin: 4mm; }
